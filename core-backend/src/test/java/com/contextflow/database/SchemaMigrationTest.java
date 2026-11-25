@@ -8,6 +8,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Savepoint;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.AfterEach;
@@ -361,6 +364,11 @@ class SchemaMigrationTest {
         UUID generation = generation(project);
         UUID item = item(project);
         UUID expected = chunk(project, item, generation);
+        UUID secondExpected = chunk(project, item, generation);
+        execute(
+                "UPDATE knowledge_chunks SET embedding = CAST(? AS public.vector(1536)) WHERE id = ?",
+                "[0.9,0.1" + ",0".repeat(1534) + "]",
+                secondExpected);
         UUID inactiveChunk = chunk(project, item, generation);
         execute("UPDATE knowledge_chunks SET is_active = false WHERE id = ?", inactiveChunk);
         UUID inactiveItem = item(project);
@@ -370,21 +378,15 @@ class SchemaMigrationTest {
                 inactiveItem);
         UUID stale = chunk(project, item, generation);
         execute("UPDATE knowledge_chunks SET source_revision = 2 WHERE id = ?", stale);
-        UUID foreignGeneration = generation(otherProject);
-        UUID foreignItem = item(otherProject);
+        UUID oldGeneration = UUID.randomUUID();
         execute(
                 """
-                INSERT INTO knowledge_chunks(id, project_id, knowledge_item_id, index_generation_id,
-                    source_type, source_revision, chunk_index, content, search_text, embedding)
-                SELECT gen_random_uuid(), ?, ?, ?, 'MAIN_TURN', 1, n, 'Other', 'Dữ liệu',
-                    CAST(? AS public.vector(1536))
-                FROM generate_series(1, 10000) AS n
+                INSERT INTO index_generations(id, project_id, embedding_model, output_dimensionality, status)
+                VALUES (?, ?, 'mock', 1536, 'SUPERSEDED')
                 """,
-                otherProject,
-                foreignItem,
-                foreignGeneration,
-                vector());
-        execute("ANALYZE knowledge_chunks");
+                oldGeneration,
+                project);
+        chunk(project, item, oldGeneration);
         execute("SET LOCAL hnsw.iterative_scan = relaxed_order");
         String search =
                 """
@@ -400,14 +402,30 @@ class SchemaMigrationTest {
                 )
                 SELECT id FROM candidates ORDER BY distance + 0, id
                 """;
-        // Exact fallback is mandatory when approximate search cannot fill the scoped candidate set.
-        Object candidate = value(search, vector(), project, vector());
-        if (candidate != null) {
-            assertEquals(expected, candidate);
-        }
+        List<UUID> expectedIds = List.of(expected, secondExpected);
+        assertEquals(expectedIds, ids(search, vector(), project, vector()));
+        UUID foreignGeneration = generation(otherProject);
+        UUID foreignItem = item(otherProject);
+        execute(
+                """
+                INSERT INTO knowledge_chunks(id, project_id, knowledge_item_id, index_generation_id,
+                    source_type, source_revision, chunk_index, content, search_text, embedding)
+                SELECT gen_random_uuid(), ?, ?, ?, 'MAIN_TURN', 1, n, 'Other', 'Dữ liệu',
+                    CAST(? AS public.vector(1536))
+                FROM generate_series(1, 10000) AS n
+                """,
+                otherProject,
+                foreignItem,
+                foreignGeneration,
+                "[0,1" + ",0".repeat(1534) + "]");
+        execute("ANALYZE knowledge_chunks");
+        List<UUID> approximateIds = ids(search, vector(), project, vector());
+        // ANN may return fewer candidates; every returned row must still belong to the valid set.
+        assertTrue(expectedIds.containsAll(approximateIds), approximateIds.toString());
+        assertEquals(approximateIds.size(), Set.copyOf(approximateIds).size());
         assertEquals(
-                expected,
-                value(
+                expectedIds,
+                ids(
                         """
                         WITH scoped AS MATERIALIZED (
                             SELECT c.id, c.embedding FROM knowledge_chunks c
@@ -423,16 +441,18 @@ class SchemaMigrationTest {
                         generation,
                         vector()));
         assertEquals(
-                1,
-                number(
-                        """
-                        SELECT count(*) FROM knowledge_chunks c
-                        JOIN knowledge_items i ON i.project_id = c.project_id
-                            AND i.id = c.knowledge_item_id AND i.source_revision = c.source_revision
-                        WHERE c.project_id = ? AND c.is_active AND i.is_active
-                            AND c.search_document @@ websearch_to_tsquery('public.cf_vi', 'du lieu')
-                        """,
-                        project));
+                Set.copyOf(expectedIds),
+                Set.copyOf(
+                        ids(
+                                """
+                                SELECT c.id FROM knowledge_chunks c
+                                JOIN knowledge_items i ON i.project_id = c.project_id
+                                    AND i.id = c.knowledge_item_id AND i.source_revision = c.source_revision
+                                JOIN index_generations g ON g.project_id = c.project_id AND g.id = c.index_generation_id
+                                WHERE c.project_id = ? AND c.is_active AND i.is_active AND g.status = 'ACTIVE'
+                                    AND c.search_document @@ websearch_to_tsquery('public.cf_vi', 'du lieu')
+                                """,
+                                project)));
         assertNotNull(value("EXPLAIN (ANALYZE, BUFFERS) " + search, vector(), project, vector()));
     }
 
@@ -650,6 +670,17 @@ class SchemaMigrationTest {
 
     private long number(String sql, Object... parameters) throws SQLException {
         return ((Number) value(sql, parameters)).longValue();
+    }
+
+    private List<UUID> ids(String sql, Object... parameters) throws SQLException {
+        try (PreparedStatement statement = prepare(sql, parameters);
+                ResultSet result = statement.executeQuery()) {
+            List<UUID> ids = new ArrayList<>();
+            while (result.next()) {
+                ids.add(result.getObject(1, UUID.class));
+            }
+            return ids;
+        }
     }
 
     private PreparedStatement prepare(String sql, Object... parameters) throws SQLException {

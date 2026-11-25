@@ -26,9 +26,13 @@ Review độc lập diff `c89341f...3ab23c7`: không có phát hiện cần sử
 
 Review bổ sung các thay đổi lockfile, Maven cache, giới hạn RAM build và type generation: không có phát hiện đáng kể.
 
+Review database `bf567e8...c3e6578`: không có phát hiện Standards cần sửa về quyền sở hữu DB, kỷ luật Flyway, secret, ranh giới dịch vụ hoặc quy ước repo. Đối chiếu cả 5 thân SQL với nguồn Confluence khớp sau khi loại phần dẫn nguồn và hiệu chỉnh seed đã công bố.
+
 ## Spec
 
 Review độc lập cùng diff scaffold ban đầu: không có sai lệch đáng kể trong phạm vi đã bàn giao. Schema được tích hợp trong thay đổi database tiếp theo; các luồng nghiệp vụ vẫn chưa được nghiệm thu.
+
+Review Spec của phần database phát hiện 1 điểm P3 trong kiểm thử DB-IT-09: mới đọc hàng vector đầu tiên nên chưa chứng minh toàn bộ tập kết quả hợp lệ. Đã sửa để đọc mọi ID, kiểm tra tập đầy đủ trên Project nhỏ và exact fallback, kiểm tra ANN không lẫn ID/không trùng trên dữ liệu lớn, thêm fixture generation SUPERSEDED. Review lại xác nhận đã xử lý; không còn phát hiện Spec cần sửa.
 
 ## Môi trường
 
