@@ -28,6 +28,15 @@ docker compose --env-file infra/.env -f infra/compose.yaml up --build -d
 
 Trên macOS/Linux dùng `cp infra/.env.example infra/.env` rồi chạy cùng lệnh Docker.
 
+Máy ít RAM có thể build lần lượt bằng các lệnh dưới đây, sau đó khởi chạy stack không build lại:
+
+```powershell
+docker compose --env-file infra/.env -f infra/compose.yaml build ai-service
+docker compose --env-file infra/.env -f infra/compose.yaml build core-backend
+docker compose --env-file infra/.env -f infra/compose.yaml build web
+docker compose --env-file infra/.env -f infra/compose.yaml up -d --no-build --wait
+```
+
 | Dịch vụ                | Địa chỉ                                          |
 | ---------------------- | ------------------------------------------------ |
 | Web                    | http://localhost:3000                            |
@@ -93,3 +102,5 @@ Compose: `docker compose --env-file infra/.env.example -f infra/compose.yaml con
 ## Bắt đầu công việc
 
 Đọc [CONTRIBUTING.md](CONTRIBUTING.md), [bản đồ chia việc](docs/team-start.md) và [nguồn chuẩn / điểm mở](docs/baseline.md). Migration nghiệp vụ 43 bảng chưa được copy vào scaffold: nhóm dữ liệu tích hợp từ BranOS-03-5 và kiểm chứng trên PostgreSQL 16 trước khi chia sẻ. Không tự đưa hành vi TBD thành quyết định đã chốt.
+
+Kết quả kiểm chứng scaffold được ghi tại [docs/verification.md](docs/verification.md).

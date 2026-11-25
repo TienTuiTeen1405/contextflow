@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
   output: "standalone",
   outputFileTracingRoot: resolve(process.cwd(), ".."),
   poweredByHeader: false,
+  experimental: { cpus: 2 },
 };
 
 export default nextConfig;
