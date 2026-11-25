@@ -1,0 +1,101 @@
+name: contextflow
+
+services:
+  postgres:
+    image: pgvector/pgvector:0.8.1-pg16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-contextflow}
+      POSTGRES_USER: ${POSTGRES_USER:-contextflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in infra/.env}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-15432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/01-extensions.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  ai-service:
+    build:
+      context: ../ai-service
+    environment:
+      CF_PROVIDER_MODE: MOCK
+      CF_INTERNAL_SERVICE_TOKEN: ${CF_INTERNAL_SERVICE_TOKEN:?Set CF_INTERNAL_SERVICE_TOKEN in infra/.env}
+    expose: ["8000"]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  core-backend:
+    build:
+      context: ../core-backend
+    environment:
+      CF_DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-contextflow}
+      CF_DB_USERNAME: ${POSTGRES_USER:-contextflow}
+      CF_DB_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in infra/.env}
+      CF_AI_BASE_URL: http://ai-service:8000
+      CF_INTERNAL_SERVICE_TOKEN: ${CF_INTERNAL_SERVICE_TOKEN:?Set CF_INTERNAL_SERVICE_TOKEN in infra/.env}
+      CF_WEB_ALLOWED_ORIGINS: ${CF_WEB_ALLOWED_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ai-service:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "curl",
+          "--fail",
+          "--silent",
+          "http://127.0.0.1:8080/actuator/health/readiness",
+        ]
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 12
+
+  web:
+    build:
+      context: ..
+      dockerfile: web/Dockerfile
+      args:
+        NEXT_PUBLIC_CORE_API_URL: http://localhost:8080
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      core-backend:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7.4-alpine
+    profiles: ["cache"]
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    expose: ["6379"]
+
+volumes:
+  postgres-data:

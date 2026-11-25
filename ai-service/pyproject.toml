@@ -1,0 +1,28 @@
+[project]
+name = "contextflow-ai-service"
+version = "0.1.0"
+description = "Stateless Provider Adapter boundary for ContextFlow V6"
+requires-python = ">=3.12,<3.15"
+dependencies = [
+    "fastapi>=0.115,<1",
+    "pydantic-settings>=2.7,<3",
+    "uvicorn[standard]>=0.34,<1",
+]
+
+[dependency-groups]
+dev = ["httpx>=0.28,<1", "pytest>=8.3,<10", "ruff>=0.14,<1", "mypy>=1.15,<2"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "ASYNC"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

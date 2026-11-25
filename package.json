@@ -1,0 +1,30 @@
+{
+  "name": "contextflow",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ContextFlow V6 monorepo — BranOS baseline",
+  "workspaces": [
+    "web"
+  ],
+  "engines": {
+    "node": ">=24 <25",
+    "npm": ">=11 <12"
+  },
+  "scripts": {
+    "dev:web": "npm run dev --workspace @contextflow/web",
+    "build:web": "npm run build --workspace @contextflow/web",
+    "check:web": "npm run check --workspace @contextflow/web",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "infra:up": "docker compose --env-file infra/.env -f infra/compose.yaml up -d postgres",
+    "infra:down": "docker compose --env-file infra/.env -f infra/compose.yaml down",
+    "stack:up": "docker compose --env-file infra/.env -f infra/compose.yaml up --build -d",
+    "stack:down": "docker compose --env-file infra/.env -f infra/compose.yaml down"
+  },
+  "devDependencies": {
+    "prettier": "3.6.2"
+  },
+  "overrides": {
+    "postcss": "8.5.33"
+  }
+}

@@ -1,0 +1,62 @@
+name: CI
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run check:web
+      - run: npm run build:web
+
+  core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - run: ./mvnw -B verify
+        working-directory: core-backend
+
+  ai:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.13.1"
+      - run: uv sync --frozen --dev
+        working-directory: ai-service
+      - run: uv run ruff check . && uv run ruff format --check . && uv run mypy app tests && uv run pytest
+        working-directory: ai-service
+
+  compose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose --env-file infra/.env.example -f infra/compose.yaml config --quiet
+      - run: docker compose --env-file infra/.env.example -f infra/compose.yaml up --build --wait --wait-timeout 180
+      - name: Smoke test services
+        run: |
+          curl --fail http://localhost:3000/api/health
+          curl --fail http://localhost:8080/actuator/health/readiness
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://localhost:8080/api/v1/projects)" = "401"
+      - name: Container logs on failure
+        if: failure()
+        run: docker compose --env-file infra/.env.example -f infra/compose.yaml logs --tail 80
+      - name: Stop development stack
+        if: always()
+        run: docker compose --env-file infra/.env.example -f infra/compose.yaml down

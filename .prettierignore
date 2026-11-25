@@ -1,0 +1,15 @@
+node_modules
+.next
+package-lock.json
+uv.lock
+target
+.venv
+.mvn
+mvnw
+mvnw.cmd
+*.java
+*.py
+.tools
+.scratch
+core-backend/mvnw
+core-backend/mvnw.cmd
