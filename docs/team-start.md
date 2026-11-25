@@ -4,7 +4,7 @@
 
 | Gói                   | Vị trí sở hữu                                            | Đầu ra đầu tiên                                                                    | Phụ thuộc                                                       |
 | --------------------- | -------------------------------------------------------- | ---------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| Data foundation       | `core-backend/src/main/resources/db/migration`           | Tích hợp/kiểm thử V001–V005 từ 03-5; 43 bảng, pgvector/FTS, composite FK           | Quyết định DDL thống nhất; không dùng bản 41 bảng               |
+| Data foundation       | `core-backend/src/main/resources/db/migration`           | V001–V005 đã tích hợp; tiếp tục repository/query và migration V006+ khi cần        | Dùng schema 43 bảng từ 03-5; không sửa checksum V001–V005       |
 | Identity & Credential | Core `identity`, `credential`; Web `auth`, `credentials` | Local/OAuth/JWT, ownership, envelope encryption, disclosure                        | Data V001–V002; không mở toàn API tạm thời                      |
 | Workspace Web         | `web/src/features/workspace`, `navigation`               | Composer, cây Main/Branch, parser fetch-SSE có fixture                             | DTO 04-2; chưa cần Provider thật                                |
 | Chat orchestration    | Core `ai`, `conversation`                                | POST 202, key/slot, events/cursor, status/cancel, commit Turn                      | Data, Identity/Credential; mock fixtures                        |

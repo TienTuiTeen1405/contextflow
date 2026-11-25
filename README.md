@@ -2,7 +2,7 @@
 
 Bộ khung monorepo cho ContextFlow V6, theo kho tài liệu **BranOS**. Mục tiêu là tạo điểm bắt đầu chung cho các nhóm Web, Core, AI và dữ liệu.
 
-**Trạng thái:** scaffold. Web có trang khởi đầu và trang Projects placeholder; Core có bảo mật đóng mặc định, Actuator, JPA/Flyway và correlation ID; AI Service có service authentication và adapter MOCK kiểm tra trạng thái. Chưa có đăng nhập, Chat/SSE nghiệp vụ, lưu hội thoại, Retrieval hay gọi Gemini thật.
+**Trạng thái:** scaffold với schema dữ liệu. Web có trang khởi đầu và trang Projects placeholder; Core có bảo mật đóng mặc định, Actuator, JPA/Flyway, 5 migration tạo 43 bảng và correlation ID; AI Service có service authentication và adapter MOCK kiểm tra trạng thái. Chưa có đăng nhập, Chat/SSE nghiệp vụ, lưu hội thoại qua API, Retrieval hay gọi Gemini thật.
 
 ## Cấu trúc
 
@@ -73,6 +73,14 @@ Set-Location core-backend
 
 Trên macOS/Linux dùng `export CF_DB_PASSWORD=...` và `./mvnw spring-boot:run`. Spring Boot không tự đọc `.env`; `core-backend/.env.example` là danh mục biến cần export. Business API đang bị chặn mặc định cho tới khi nhóm Identity triển khai JWT/ownership.
 
+#### Chạy Core trong IntelliJ IDEA
+
+1. Mở monorepo, mở `core-backend/pom.xml` rồi chọn **Add as Maven Project**. Cửa sổ Maven phải hiển thị **ContextFlow Core Backend**.
+2. Đặt Project SDK/module SDK là **JDK 21**; trong Settings → Build Tools → Maven, chọn **Use Maven wrapper**. Không cần cài Maven toàn máy.
+3. Copy `core-backend/.env.example` thành `core-backend/.env`. Đặt `CF_DB_PASSWORD` trùng `POSTGRES_PASSWORD` trong `infra/.env`; chỉnh URL/user nếu đã đổi DB. File `.env` được Git bỏ qua.
+4. Mở Run → Edit Configurations, chọn Spring Boot `ContextFlowApplication`, main class `com.contextflow.ContextFlowApplication`, module `core-backend`. Trong **Modify options → Environment variables**, chọn file `core-backend/.env` bằng biểu tượng thư mục. IntelliJ sẽ nạp các biến khi chạy.
+5. Khởi động PostgreSQL rồi Run/Debug cấu hình trên. File mẫu dùng `CF_CORE_PORT=18080` để chạy song song với Core Docker ở `8080`. Kiểm tra `http://localhost:18080/actuator/health/readiness` trả `{"status":"UP"}`.
+
 ### AI Service
 
 ```powershell
@@ -93,7 +101,7 @@ npm run build:web
 npm run format:check
 ```
 
-Trong `core-backend`: `./mvnw.cmd verify` (Linux/macOS: `./mvnw verify`). Format Java bằng `./mvnw.cmd spotless:apply`.
+Trong `core-backend`: bật Docker rồi chạy `./mvnw.cmd verify` (Linux/macOS: `./mvnw verify`). Kiểm thử schema dùng Testcontainers tạo PostgreSQL 16 + pgvector 0.8.1 riêng, chạy V001–V005 và kiểm tra các bất biến DB-IT-01–10; không sửa DB development. Format Java bằng `./mvnw.cmd spotless:apply`.
 
 Trong `ai-service`: `uv run ruff check .`, `uv run ruff format --check .`, `uv run mypy app tests`, `uv run pytest`.
 
@@ -101,6 +109,6 @@ Compose: `docker compose --env-file infra/.env.example -f infra/compose.yaml con
 
 ## Bắt đầu công việc
 
-Đọc [CONTRIBUTING.md](CONTRIBUTING.md), [bản đồ chia việc](docs/team-start.md) và [nguồn chuẩn / điểm mở](docs/baseline.md). Migration nghiệp vụ 43 bảng chưa được copy vào scaffold: nhóm dữ liệu tích hợp từ BranOS-03-5 và kiểm chứng trên PostgreSQL 16 trước khi chia sẻ. Không tự đưa hành vi TBD thành quyết định đã chốt.
+Đọc [CONTRIBUTING.md](CONTRIBUTING.md), [bản đồ chia việc](docs/team-start.md) và [nguồn chuẩn / điểm mở](docs/baseline.md). Migration nghiệp vụ 43 bảng từ BranOS-03-5 đã có trong Core và tự chạy bằng Flyway khi backend khởi động; xem [hướng dẫn database](docs/database.md). Không tự đưa hành vi TBD thành quyết định đã chốt.
 
 Kết quả kiểm chứng scaffold được ghi tại [docs/verification.md](docs/verification.md).

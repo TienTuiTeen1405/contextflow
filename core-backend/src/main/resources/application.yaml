@@ -19,6 +19,9 @@ spring:
           time_zone: UTC
   flyway:
     enabled: true
+    url: ${CF_FLYWAY_URL:${CF_DB_URL:jdbc:postgresql://localhost:15432/contextflow}}
+    user: ${CF_FLYWAY_USERNAME:${CF_DB_USERNAME:contextflow}}
+    password: ${CF_FLYWAY_PASSWORD:${CF_DB_PASSWORD}}
     default-schema: contextflow
     schemas: contextflow
     locations: classpath:db/migration
