@@ -33,7 +33,18 @@ Các kiểm tra scaffold không thay thế nghiệm thu tính năng Chat/Auth/KB
 - Preset IDE: `setup:local -- --mode ide`, Compose override DB/AI và `dev:core` trên JDK 21 đã chạy thành công Core 18080, Flyway validate schema 005; `local:check` đạt Core readiness/Auth/CORS và AI service identity/MOCK tại 18000. Dùng cùng file env với run config IntelliJ đã chia sẻ. Process Core kiểm thử đã dừng; workspace được đưa về preset Docker mặc định sau lượt thử.
 - Repo chưa có remote: CI đã được khai báo/cập nhật, chưa có kết quả pipeline trên repository chung.
 
+## Demo Mode và workspace 04-3 — 26/11/2026
+
+- Core JDK 21 `verify`: **71 tests đạt**, không skip (50 hợp đồng/fixture, 10 schema, 9 workspace demo, 2 security); Spotless và JAR đạt. Testcontainers dùng PostgreSQL riêng. V001–V005 không thay đổi.
+- AI: Ruff lint/format, mypy và **69 pytest đạt**; giữ deprecation warning TestClient đã biết. Contract export/check đạt; 44 fixture JSON được kiểm tra ở Java/Python. Demo OpenAPI resolve các ref ngoài thành công qua openapi-typescript.
+- Tooling: **4 tests đạt**, bao gồm bật/tắt demo giữ profile khác và DB password/KEK. Ownership đủ 43 bảng; chưa gán reviewer theo tên. Web lint/typecheck/production build và Prettier toàn repo đạt.
+- Docker demo: build thành công, Web/Core/AI/PostgreSQL healthy; `demo:check` đạt readiness, CORS, đúng USER không mật khẩu/JWT trên Core 8080. HTTP thực tế tạo Project, Conversation có Main, tạo/PATCH/xóa Personal Skill thành công. Để lại Project `Demo Workspace` và Conversation `Main demo` làm dữ liệu ghép nhóm; skill kiểm tra đã xóa.
+- Workspace cuối đang ở preset Docker Demo Mode. Preset IntelliJ được cấu hình đọc cùng file env; chưa chạy lại process IntelliJ trong lượt demo này. CI smoke đã thêm kiểm tra normal 401 rồi demo 200; chưa có pipeline remote.
+- Các kiểm tra này chỉ nghiệm thu nền demo. Web vẫn scaffold; Chat worker/SSE/Turn, JWT, template copy, archive lifecycle và ADM-07 quota chưa triển khai. Xem [phạm vi](demo.md).
+
 ## Standards
+
+Review demo `2bf8b22...757385d`: không có phát hiện Standards cần sửa; kiểm tra security mặc định/demo, seeder, owner scope, transaction và cấu hình local.
 
 Review độc lập diff `c89341f...3ab23c7`: không có phát hiện cần sửa về quy ước code, Docker paths/users, CI, security defaults, ranh giới dịch vụ hoặc onboarding. Review đọc source; runtime được kiểm chứng riêng.
 
@@ -44,6 +55,8 @@ Review database `bf567e8...c3e6578`: không có phát hiện Standards cần s�
 Review hợp đồng/ownership/local `6b369bc...8d51553`: không có phát hiện Standards cần sửa. Core giữ quyền persistence, AI stateless/Mock, Web chỉ import public contracts; nguồn sinh DTO và việc chưa gán named reviewer đều được mô tả rõ. Chỉnh sửa `.gitignore` và format POM của người dùng nằm ngoài review/commit.
 
 ## Spec
+
+Review demo cùng diff phát hiện ép kiểu JSON mặc định của Jackson có thể nhận scalar sai kiểu so với OpenAPI. Đã thêm cấu hình JSON nghiêm ngặt chỉ cho profile demo và regression HTTP (name số, priority phân số/chuỗi, boolean chuỗi, enum số). Không có phát hiện Spec khác.
 
 Review độc lập cùng diff scaffold ban đầu: không có sai lệch đáng kể trong phạm vi đã bàn giao. Schema được tích hợp trong thay đổi database tiếp theo; các luồng nghiệp vụ vẫn chưa được nghiệm thu.
 

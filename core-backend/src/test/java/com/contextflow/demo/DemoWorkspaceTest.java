@@ -266,6 +266,26 @@ class DemoWorkspaceTest {
         nullPriority.put("content", "Content");
         nullPriority.put("priority", null);
         error(HttpMethod.POST, "/api/v1/me/personal-skills", nullPriority, 400, "VALIDATION_ERROR");
+        error(HttpMethod.POST, "/api/v1/projects", Map.of("name", 123), 400, "VALIDATION_ERROR");
+        for (Object priority : new Object[] {1.5, "10"})
+            error(
+                    HttpMethod.POST,
+                    "/api/v1/me/personal-skills",
+                    Map.of("name", "Strict", "content", "", "priority", priority),
+                    400,
+                    "VALIDATION_ERROR");
+        error(
+                HttpMethod.POST,
+                "/api/v1/me/personal-skills",
+                Map.of("name", "Strict", "content", "", "isEnabled", "true"),
+                400,
+                "VALIDATION_ERROR");
+        error(
+                HttpMethod.PATCH,
+                "/api/v1/me",
+                Map.of("themePreference", 0),
+                400,
+                "VALIDATION_ERROR");
         assertEquals(0, count("SELECT count(*) FROM contextflow.projects"));
         error(HttpMethod.GET, "/api/v1/admin/users", null, 403, "FORBIDDEN");
         error(HttpMethod.GET, "/api/v1/me/credential", null, 403, "FORBIDDEN");
