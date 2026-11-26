@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 from collections.abc import AsyncIterator
 from typing import Annotated, Any, Never
 
@@ -43,6 +44,7 @@ from app.security.service_auth import require_service_auth
 router = APIRouter(
     prefix="/internal/v1/ai", tags=["internal-ai"], dependencies=[Depends(require_service_auth)]
 )
+logger = logging.getLogger(__name__)
 Provider = Annotated[ProviderAdapter, Depends(get_provider)]
 
 
@@ -145,7 +147,11 @@ async def streams(
                 raise ValueError("Initial provider.failed must have dispatched=False")
         else:
             raise ValueError("Dispatch acknowledgement or undispatched failure required")
-    except Exception:
+    except Exception as exc:
+        logger.warning(
+            "Internal stream setup failed exc_type=%s",
+            type(exc).__name__,
+        )
         await close_stream(iterator)
         return failure_response(
             502, "ADAPTER_UNAVAILABLE", request.model_dump(), category="UNKNOWN_REQUIRES_REVIEW"
@@ -202,7 +208,11 @@ async def streams(
                     return
         except asyncio.CancelledError:
             return
-        except Exception:
+        except Exception as exc:
+            logger.warning(
+                "Internal stream failed mid-stream exc_type=%s",
+                type(exc).__name__,
+            )
             failed = failure_payload(
                 "PROVIDER_UNAVAILABLE",
                 request.model_dump(),
@@ -254,7 +264,8 @@ def generate(
             retryable=exc.retryable,
             retry_after_seconds=exc.retry_after_seconds,
         )
-    except Exception:
+    except Exception as exc:
+        logger.warning("Internal generate failed exc_type=%s", type(exc).__name__)
         return failure_response(
             502, "ADAPTER_UNAVAILABLE", request.model_dump(), category="UNKNOWN_REQUIRES_REVIEW"
         )
@@ -303,7 +314,8 @@ def embeddings(
             retryable=exc.retryable,
             retry_after_seconds=exc.retry_after_seconds,
         )
-    except Exception:
+    except Exception as exc:
+        logger.warning("Internal embeddings failed exc_type=%s", type(exc).__name__)
         return failure_response(
             502, "ADAPTER_UNAVAILABLE", request.model_dump(), category="UNKNOWN_REQUIRES_REVIEW"
         )
@@ -337,7 +349,8 @@ def verify(
     mock_token = set_mock_request_context(_mock_context_from_request(http_request, credential))
     try:
         return provider.verify(request, credential)
-    except Exception:
+    except Exception as exc:
+        logger.warning("Internal credential verify failed exc_type=%s", type(exc).__name__)
         return failure_response(
             502, "ADAPTER_UNAVAILABLE", request.model_dump(), category="UNKNOWN_REQUIRES_REVIEW"
         )
