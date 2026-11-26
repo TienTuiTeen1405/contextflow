@@ -29,8 +29,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
-@SpringBootTest(
-        properties = "CF_LOCAL_ENV_IMPORT=optional:classpath:/test-no-local-env.properties")
+@SpringBootTest(properties = "CF_LOCAL_ENV_IMPORT=optional:classpath:/test-no-local-env.properties")
 @ActiveProfiles("local-demo")
 @Testcontainers
 class LocalDemoFoundationIntegrationTest {

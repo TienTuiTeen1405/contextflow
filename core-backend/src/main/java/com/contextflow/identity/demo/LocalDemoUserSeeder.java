@@ -22,10 +22,9 @@ public class LocalDemoUserSeeder implements ApplicationRunner {
     public void run(ApplicationArguments arguments) {
         boolean productionActive =
                 Arrays.stream(environment.getActiveProfiles())
-                        .anyMatch(
-                                profile ->
-                                        "prod".equalsIgnoreCase(profile)
-                                                || "production".equalsIgnoreCase(profile));
+                        .anyMatch(profile ->
+                                "prod".equalsIgnoreCase(profile)
+                                        || "production".equalsIgnoreCase(profile));
         if (productionActive) {
             throw new IllegalStateException(
                     "local-demo profile cannot be combined with production.");
