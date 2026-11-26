@@ -1,6 +1,16 @@
 # ContextFlow
 
-Monorepo ContextFlow V6 theo tài liệu **BranOS**. Đã có Web scaffold, Core Spring Boot/43 bảng Flyway và AI Service với bốn endpoint Mock. Các luồng đăng nhập, Project/Chat nghiệp vụ và durable SSE thuộc gói M1 tiếp theo; Gemini thật chưa bật.
+Monorepo ContextFlow V6 theo tài liệu **BranOS**. Đã có Web scaffold, Core Spring Boot/43 bảng Flyway, API workspace cơ bản trong Demo Mode và AI Service với bốn endpoint Mock. Auth/JWT được hoãn theo yêu cầu demo; Chat và durable SSE thuộc gói M1 tiếp theo; Gemini thật chưa bật.
+
+## Bắt đầu demo không đăng nhập
+
+```powershell
+npm ci
+npm run demo:up
+npm run demo:check
+```
+
+Demo Mode cấp một user local cố định và API thật cho hồ sơ, Project, Conversation và Personal Skills. Web vẫn là scaffold để thành viên xây giao diện; chưa có luồng Chat hoàn chỉnh. Xem [phạm vi và cách chạy IntelliJ](docs/demo.md). Profile mặc định bên dưới vẫn đóng API nghiệp vụ; chỉ bật demo bằng tùy chọn rõ ràng.
 
 ## Cấu trúc và nơi bắt đầu
 

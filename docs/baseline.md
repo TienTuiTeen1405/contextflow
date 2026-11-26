@@ -28,6 +28,8 @@ Scaffold giữ Next.js 15 theo [bản vá chính thức tháng 11/2026](https://
 
 ## Cổng cần giữ nguyên
 
+Ngoại lệ local theo yêu cầu người dùng ngày 26/11/2026: Auth/JWT hoãn khỏi demo; profile `demo` dùng một USER cố định cho API workspace cơ bản. Baseline JWT và profile mặc định giữ nguyên. Chi tiết/giới hạn tại [demo.md](demo.md); không đóng TBD-01 hoặc PoC Gate.
+
 - CF-DEC-038 PoC Gate: PENDING. M1 được phát triển với Mock. Chưa pin SDK Gemini hoặc bật Provider thật.
 - CF-OPEN-030A/B/D/E/F/G và 031A–E: OPEN trong Master Notes. Các con số A-11 là cấu hình khởi điểm, cần kiểm chứng.
 - CF-OPEN-033: OPEN trước public release; không chặn scaffold/MVP nội bộ.

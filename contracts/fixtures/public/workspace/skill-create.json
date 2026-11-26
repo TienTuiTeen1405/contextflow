@@ -1,0 +1,7 @@
+{
+  "name": "Trả lời tiếng Việt",
+  "description": "Kỹ năng cá nhân mẫu.",
+  "content": "Trả lời ngắn gọn bằng tiếng Việt.",
+  "priority": 100,
+  "isEnabled": true
+}

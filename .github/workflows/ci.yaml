@@ -59,6 +59,11 @@ jobs:
           curl --fail http://localhost:3000/api/health
           curl --fail http://localhost:8080/actuator/health/readiness
           test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://localhost:8080/api/v1/projects)" = "401"
+      - name: Demo workspace smoke
+        run: |
+          docker compose --env-file infra/.env.example -f infra/compose.yaml -f infra/compose.demo.yaml up -d --no-build --wait --wait-timeout 180 core-backend
+          curl --fail http://localhost:8080/api/v1/me
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://localhost:8080/api/v1/projects)" = "200"
       - name: Container logs on failure
         if: failure()
         run: docker compose --env-file infra/.env.example -f infra/compose.yaml logs --tail 80

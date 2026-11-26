@@ -123,5 +123,100 @@
     "file": "internal/error.json",
     "document": "internal",
     "schema": "InternalError"
+  },
+  {
+    "file": "public/workspace/profile.json",
+    "document": "public",
+    "schema": "UserProfile"
+  },
+  {
+    "file": "public/workspace/profile-patch.json",
+    "document": "public",
+    "schema": "ProfilePatch"
+  },
+  {
+    "file": "public/workspace/project-create.json",
+    "document": "public",
+    "schema": "ProjectCreateInput"
+  },
+  {
+    "file": "public/workspace/project.json",
+    "document": "public",
+    "schema": "ProjectView"
+  },
+  {
+    "file": "public/workspace/project-patch.json",
+    "document": "public",
+    "schema": "ProjectPatchInput"
+  },
+  {
+    "file": "public/workspace/project-clear-description.json",
+    "document": "public",
+    "schema": "ProjectPatchInput"
+  },
+  {
+    "file": "public/workspace/projects-page.json",
+    "document": "public",
+    "schema": "ProjectsPage"
+  },
+  {
+    "file": "public/workspace/projects-empty.json",
+    "document": "public",
+    "schema": "ProjectsPage"
+  },
+  {
+    "file": "public/workspace/conversation-create.json",
+    "document": "public",
+    "schema": "TitleCreateInput"
+  },
+  {
+    "file": "public/workspace/conversation.json",
+    "document": "public",
+    "schema": "ConversationView"
+  },
+  {
+    "file": "public/workspace/conversation-patch.json",
+    "document": "public",
+    "schema": "ConversationPatchInput"
+  },
+  {
+    "file": "public/workspace/conversations-page.json",
+    "document": "public",
+    "schema": "ConversationsPage"
+  },
+  {
+    "file": "public/workspace/stage.json",
+    "document": "public",
+    "schema": "StageView"
+  },
+  {
+    "file": "public/workspace/skill-create.json",
+    "document": "public",
+    "schema": "SkillCreateInput"
+  },
+  {
+    "file": "public/workspace/skill.json",
+    "document": "public",
+    "schema": "SkillView"
+  },
+  {
+    "file": "public/workspace/skill-patch.json",
+    "document": "public",
+    "schema": "SkillPatchInput"
+  },
+  {
+    "file": "public/workspace/skill-clear-description.json",
+    "document": "public",
+    "schema": "SkillPatchInput"
+  },
+  {
+    "file": "public/workspace/personal-intelligence.json",
+    "document": "public",
+    "schema": "PersonalIntelligenceView"
+  },
+  {
+    "file": "public/workspace/error-project-deleting.json",
+    "document": "public",
+    "schema": "ErrorEnvelope"
   }
 ]

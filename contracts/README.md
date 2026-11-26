@@ -1,13 +1,14 @@
 # Hợp đồng API dùng chung
 
-Nguồn chuẩn: [BranOS-04-1 v7](https://tientuiteen.atlassian.net/wiki/spaces/BranOS1/pages/1704081), [BranOS-04-2 v2](https://tientuiteen.atlassian.net/wiki/spaces/BranOS1/pages/7635034), [BranOS-04-6 v2](https://tientuiteen.atlassian.net/wiki/spaces/BranOS1/pages/7536753), đối chiếu 26/11/2026. Các DTO Auth/Workspace/Admin chi tiết ở 04-3/04-4/04-5 thuộc những gói triển khai tiếp theo.
+Nguồn chuẩn: [BranOS-04-1 v7](https://tientuiteen.atlassian.net/wiki/spaces/BranOS1/pages/1704081), [BranOS-04-2 v2](https://tientuiteen.atlassian.net/wiki/spaces/BranOS1/pages/7635034), [BranOS-04-3 v2](https://tientuiteen.atlassian.net/wiki/spaces/BranOS1/pages/7471214), [BranOS-04-6 v2](https://tientuiteen.atlassian.net/wiki/spaces/BranOS1/pages/7536753), đối chiếu 26/11/2026. Auth/Admin chi tiết thuộc gói sau.
 
 | Tệp                       | Vai trò                                                                                             |
 | ------------------------- | --------------------------------------------------------------------------------------------------- |
-| `public.openapi.json`     | OpenAPI 3.1 cho 4 endpoint Chat/SSE; DTO Chat, Turn, pagination, 25 mã lỗi, 7 public event          |
+| `public.openapi.json`     | OpenAPI 3.1 cho Chat/SSE và workspace; DTO, pagination, 25 mã lỗi, 7 public event                   |
+| `demo.openapi.json`       | View sinh tự động cho 13 thao tác workspace demo không JWT; tham chiếu schema public                |
 | `internal.openapi.json`   | OpenAPI 3.1 xuất từ FastAPI/Pydantic; 4 task endpoint, PromptEnvelope, 7 nhóm lỗi, 4 internal event |
 | `error-codes.json`        | HTTP/retryable/SSE metadata cho đúng 25 mã chuẩn 04-1                                               |
-| `fixtures/manifest.json`  | 25 mẫu JSON có tên document/schema để Java và Python dùng cùng bộ mẫu                               |
+| `fixtures/manifest.json`  | 44 mẫu JSON có tên document/schema để Java và Python dùng cùng bộ mẫu                               |
 | `fixtures/public/*.sse`   | Happy path, failure, cancellation; event ID tăng dần, đúng một terminal                             |
 | `fixtures/internal/*.sse` | Dispatch acknowledgement, delta và terminal; không có cursor/replay                                 |
 
@@ -26,6 +27,7 @@ Khi thay đổi: sửa nguồn, cập nhật fixture, chạy generate/check và 
 
 ## Trạng thái triển khai
 
+- **Workspace demo:** hồ sơ, Project, Conversation và Personal Skills có DTO/type/19 fixture mới cùng API CRUD cơ bản. Chỉ bật trong profile demo; xem [giới hạn](../docs/demo.md). Public spec giữ JWT baseline, demo spec thể hiện chính xác ngoại lệ local. PATCH dùng RequestFields để phân biệt absent/null; NonNullIfPresent là metadata cho reader, không phải Bean Validation constraint.
 - **Core Public Chat:** hợp đồng/DTO/quy tắc transport và fixture đã có. Business controller, JWT/ownership, transaction/idempotency/slot, worker, durable SSE/reconnect/TTL/cancel và persistence Turn vẫn là công việc M1. Security tiếp tục đóng mặc định.
 - **AI Internal:** `POST /internal/v1/ai/streams`, `/generate`, `/embeddings`, `/credentials/verify` đã có bản **MOCK**. Mỗi response mang `X-Provider-Mode: MOCK`; không có SDK hoặc network tới Gemini. `GET /status` vẫn phục vụ kiểm tra bootstrap.
 - **Prompt Compiler/Builder:** DTO A–E đã có. Compile quyền/ngân sách, serialization XML và pipeline thực vẫn thuộc nhóm Core/AI; chưa xác nhận checklist E2E/PoC đã đạt.

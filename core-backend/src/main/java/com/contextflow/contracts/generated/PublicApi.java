@@ -7,6 +7,7 @@ import jakarta.annotation.Generated;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import com.contextflow.contracts.CodePointSize;
+import com.contextflow.contracts.NonNullIfPresent;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -24,7 +25,7 @@ public final class PublicApi {
         Boolean retryable,
         @JsonProperty(value = "correlationId", required = true) @NotNull
         UUID correlationId,
-        @JsonProperty(value = "details", required = false) @JsonInclude(JsonInclude.Include.NON_NULL)
+        @JsonProperty(value = "details", required = false) @JsonInclude(JsonInclude.Include.NON_NULL) @NonNullIfPresent
         JsonNode details
     ) {}
 
@@ -134,9 +135,9 @@ public final class PublicApi {
         UUID subBranchId,
         @JsonProperty(value = "userContentBlocks", required = true) @NotNull @Size(min = 1, max = 2147483647) @Valid
         List<ContentBlock> userContentBlocks,
-        @JsonProperty(value = "quotes", required = false) @JsonInclude(JsonInclude.Include.NON_NULL) @Valid
+        @JsonProperty(value = "quotes", required = false) @JsonInclude(JsonInclude.Include.NON_NULL) @NonNullIfPresent @Valid
         List<QuoteInput> quotes,
-        @JsonProperty(value = "mainReferences", required = false) @JsonInclude(JsonInclude.Include.NON_NULL) @Valid
+        @JsonProperty(value = "mainReferences", required = false) @JsonInclude(JsonInclude.Include.NON_NULL) @NonNullIfPresent @Valid
         List<MainReference> mainReferences
     ) {
         public ChatInput {
@@ -152,7 +153,7 @@ public final class PublicApi {
         UUID correlationId,
         @JsonProperty(value = "status", required = true) @NotNull @Valid
         RequestState status,
-        @JsonProperty(value = "effectivePrivacyTierPlanned", required = false) @JsonInclude(JsonInclude.Include.NON_NULL) @Valid
+        @JsonProperty(value = "effectivePrivacyTierPlanned", required = false) @JsonInclude(JsonInclude.Include.NON_NULL) @NonNullIfPresent @Valid
         PrivacyTier effectivePrivacyTierPlanned,
         @JsonProperty(value = "eventsUrl", required = true) @NotNull
         String eventsUrl,
@@ -214,9 +215,9 @@ public final class PublicApi {
     public record Turn(
         @JsonProperty(value = "id", required = true) @NotNull
         UUID id,
-        @JsonProperty(value = "projectId", required = false) @JsonInclude(JsonInclude.Include.NON_NULL)
+        @JsonProperty(value = "projectId", required = false) @JsonInclude(JsonInclude.Include.NON_NULL) @NonNullIfPresent
         UUID projectId,
-        @JsonProperty(value = "conversationId", required = false) @JsonInclude(JsonInclude.Include.NON_NULL)
+        @JsonProperty(value = "conversationId", required = false) @JsonInclude(JsonInclude.Include.NON_NULL) @NonNullIfPresent
         UUID conversationId,
         @JsonProperty(value = "mainStageId", required = true) @NotNull
         UUID mainStageId,
@@ -373,6 +374,202 @@ public final class PublicApi {
         Boolean hasNext
     ) {}
 
+    public record UserProfile(
+        @JsonProperty(value = "id", required = true) @NotNull
+        UUID id,
+        @JsonProperty(value = "email", required = true) @NotNull
+        String email,
+        @JsonProperty(value = "displayName", required = true) @NotNull @CodePointSize(min = 1, max = 2147483647) @Pattern(regexp = "(?s).*(?:\\S).*")
+        String displayName,
+        @JsonProperty(value = "role", required = true) @NotNull @Valid
+        UserRole role,
+        @JsonProperty(value = "status", required = true) @NotNull @Valid
+        UserStatus status,
+        @JsonProperty(value = "themePreference", required = true) @NotNull @Valid
+        ThemePreference themePreference,
+        @JsonProperty(value = "hasLocalPassword", required = true) @NotNull
+        Boolean hasLocalPassword,
+        @JsonProperty(value = "personalIntelligenceEnabled", required = true) @NotNull
+        Boolean personalIntelligenceEnabled
+    ) {}
+
+    public record ProfilePatch(
+        @JsonProperty(value = "displayName", required = false) @JsonInclude(JsonInclude.Include.NON_NULL) @NonNullIfPresent @CodePointSize(min = 1, max = 2147483647) @Pattern(regexp = "(?s).*(?:\\S).*")
+        String displayName,
+        @JsonProperty(value = "themePreference", required = false) @JsonInclude(JsonInclude.Include.NON_NULL) @NonNullIfPresent @Valid
+        ThemePreference themePreference
+    ) {}
+
+    public record SkillView(
+        @JsonProperty(value = "id", required = true) @NotNull
+        UUID id,
+        @JsonProperty(value = "name", required = true) @NotNull @CodePointSize(min = 1, max = 2147483647) @Pattern(regexp = "(?s).*(?:\\S).*")
+        String name,
+        @JsonProperty(value = "description", required = false) @JsonInclude(JsonInclude.Include.NON_NULL)
+        String description,
+        @JsonProperty(value = "content", required = true) @NotNull
+        String content,
+        @JsonProperty(value = "priority", required = true) @NotNull @Min(0) @Max(2147483647)
+        Long priority,
+        @JsonProperty(value = "isEnabled", required = true) @NotNull
+        Boolean isEnabled
+    ) {}
+
+    public record SkillCreateInput(
+        @JsonProperty(value = "name", required = true) @NotNull @CodePointSize(min = 1, max = 2147483647) @Pattern(regexp = "(?s).*(?:\\S).*")
+        String name,
+        @JsonProperty(value = "description", required = false) @JsonInclude(JsonInclude.Include.NON_NULL)
+        String description,
+        @JsonProperty(value = "content", required = true) @NotNull
+        String content,
+        @JsonProperty(value = "priority", required = false) @JsonInclude(JsonInclude.Include.NON_NULL) @NonNullIfPresent @Min(0) @Max(2147483647)
+        Long priority,
+        @JsonProperty(value = "isEnabled", required = false) @JsonInclude(JsonInclude.Include.NON_NULL) @NonNullIfPresent
+        Boolean isEnabled,
+        @JsonProperty(value = "sourceTemplateId", required = false) @JsonInclude(JsonInclude.Include.NON_NULL)
+        UUID sourceTemplateId
+    ) {}
+
+    public record SkillPatchInput(
+        @JsonProperty(value = "name", required = false) @JsonInclude(JsonInclude.Include.NON_NULL) @NonNullIfPresent @CodePointSize(min = 1, max = 2147483647) @Pattern(regexp = "(?s).*(?:\\S).*")
+        String name,
+        @JsonProperty(value = "description", required = false) @JsonInclude(JsonInclude.Include.NON_NULL)
+        String description,
+        @JsonProperty(value = "content", required = false) @JsonInclude(JsonInclude.Include.NON_NULL) @NonNullIfPresent
+        String content,
+        @JsonProperty(value = "priority", required = false) @JsonInclude(JsonInclude.Include.NON_NULL) @NonNullIfPresent @Min(0) @Max(2147483647)
+        Long priority,
+        @JsonProperty(value = "isEnabled", required = false) @JsonInclude(JsonInclude.Include.NON_NULL) @NonNullIfPresent
+        Boolean isEnabled
+    ) {}
+
+    public record PersonalIntelligenceView(
+        @JsonProperty(value = "personalIntelligenceEnabled", required = true) @NotNull
+        Boolean personalIntelligenceEnabled,
+        @JsonProperty(value = "personalProfileText", required = true)
+        String personalProfileText,
+        @JsonProperty(value = "personalInstructions", required = true)
+        String personalInstructions,
+        @JsonProperty(value = "personalSkills", required = true) @NotNull @Valid
+        List<SkillView> personalSkills
+    ) {}
+
+    public record ProjectView(
+        @JsonProperty(value = "id", required = true) @NotNull
+        UUID id,
+        @JsonProperty(value = "name", required = true) @NotNull @CodePointSize(min = 1, max = 2147483647) @Pattern(regexp = "(?s).*(?:\\S).*")
+        String name,
+        @JsonProperty(value = "description", required = false) @JsonInclude(JsonInclude.Include.NON_NULL)
+        String description,
+        @JsonProperty(value = "projectIntelligenceEnabled", required = true) @NotNull
+        Boolean projectIntelligenceEnabled,
+        @JsonProperty(value = "status", required = true) @NotNull @Valid
+        ProjectStatus status,
+        @JsonProperty(value = "createdAt", required = true) @NotNull
+        Instant createdAt,
+        @JsonProperty(value = "updatedAt", required = true) @NotNull
+        Instant updatedAt
+    ) {}
+
+    public record ProjectCreateInput(
+        @JsonProperty(value = "name", required = true) @NotNull @CodePointSize(min = 1, max = 2147483647) @Pattern(regexp = "(?s).*(?:\\S).*")
+        String name,
+        @JsonProperty(value = "description", required = false) @JsonInclude(JsonInclude.Include.NON_NULL)
+        String description,
+        @JsonProperty(value = "ruleTemplateIds", required = false) @JsonInclude(JsonInclude.Include.NON_NULL) @NonNullIfPresent @Valid
+        List<UUID> ruleTemplateIds,
+        @JsonProperty(value = "skillTemplateIds", required = false) @JsonInclude(JsonInclude.Include.NON_NULL) @NonNullIfPresent @Valid
+        List<UUID> skillTemplateIds
+    ) {
+        public ProjectCreateInput {
+            ruleTemplateIds = ruleTemplateIds == null ? List.of() : List.copyOf(ruleTemplateIds);
+            skillTemplateIds = skillTemplateIds == null ? List.of() : List.copyOf(skillTemplateIds);
+        }
+    }
+
+    public record ProjectPatchInput(
+        @JsonProperty(value = "name", required = false) @JsonInclude(JsonInclude.Include.NON_NULL) @NonNullIfPresent @CodePointSize(min = 1, max = 2147483647) @Pattern(regexp = "(?s).*(?:\\S).*")
+        String name,
+        @JsonProperty(value = "description", required = false) @JsonInclude(JsonInclude.Include.NON_NULL)
+        String description,
+        @JsonProperty(value = "status", required = false) @JsonInclude(JsonInclude.Include.NON_NULL) @NonNullIfPresent @Valid
+        ProjectWritableStatus status
+    ) {}
+
+    public record TitleCreateInput(
+        @JsonProperty(value = "title", required = true) @NotNull @CodePointSize(min = 1, max = 2147483647) @Pattern(regexp = "(?s).*(?:\\S).*")
+        String title
+    ) {}
+
+    public record ConversationPatchInput(
+        @JsonProperty(value = "title", required = false) @JsonInclude(JsonInclude.Include.NON_NULL) @NonNullIfPresent @CodePointSize(min = 1, max = 2147483647) @Pattern(regexp = "(?s).*(?:\\S).*")
+        String title,
+        @JsonProperty(value = "status", required = false) @JsonInclude(JsonInclude.Include.NON_NULL) @NonNullIfPresent @Valid
+        ProjectWritableStatus status
+    ) {}
+
+    public record ConversationView(
+        @JsonProperty(value = "id", required = true) @NotNull
+        UUID id,
+        @JsonProperty(value = "projectId", required = true) @NotNull
+        UUID projectId,
+        @JsonProperty(value = "title", required = true) @NotNull @CodePointSize(min = 1, max = 2147483647) @Pattern(regexp = "(?s).*(?:\\S).*")
+        String title,
+        @JsonProperty(value = "status", required = true) @NotNull @Valid
+        ConversationStatus status,
+        @JsonProperty(value = "mainStageId", required = true)
+        UUID mainStageId,
+        @JsonProperty(value = "createdAt", required = true) @NotNull
+        Instant createdAt,
+        @JsonProperty(value = "updatedAt", required = true) @NotNull
+        Instant updatedAt
+    ) {}
+
+    public record StageView(
+        @JsonProperty(value = "id", required = true) @NotNull
+        UUID id,
+        @JsonProperty(value = "parentStageId", required = false) @JsonInclude(JsonInclude.Include.NON_NULL)
+        UUID parentStageId,
+        @JsonProperty(value = "stageOrder", required = true) @NotNull @Min(1) @Max(2147483647)
+        Long stageOrder,
+        @JsonProperty(value = "title", required = true) @NotNull @CodePointSize(min = 1, max = 2147483647) @Pattern(regexp = "(?s).*(?:\\S).*")
+        String title,
+        @JsonProperty(value = "status", required = true) @NotNull
+        StageViewStatus status,
+        @JsonProperty(value = "createdAt", required = true) @NotNull
+        Instant createdAt
+    ) {}
+
+    public record ProjectsPage(
+        @JsonProperty(value = "items", required = true) @NotNull @Valid
+        List<ProjectView> items,
+        @JsonProperty(value = "page", required = true) @NotNull @Min(0)
+        Long page,
+        @JsonProperty(value = "size", required = true) @NotNull @Min(1) @Max(100)
+        Long size,
+        @JsonProperty(value = "totalElements", required = true) @NotNull @Min(0)
+        Long totalElements,
+        @JsonProperty(value = "totalPages", required = true) @NotNull @Min(0)
+        Long totalPages,
+        @JsonProperty(value = "hasNext", required = true) @NotNull
+        Boolean hasNext
+    ) {}
+
+    public record ConversationsPage(
+        @JsonProperty(value = "items", required = true) @NotNull @Valid
+        List<ConversationView> items,
+        @JsonProperty(value = "page", required = true) @NotNull @Min(0)
+        Long page,
+        @JsonProperty(value = "size", required = true) @NotNull @Min(1) @Max(100)
+        Long size,
+        @JsonProperty(value = "totalElements", required = true) @NotNull @Min(0)
+        Long totalElements,
+        @JsonProperty(value = "totalPages", required = true) @NotNull @Min(0)
+        Long totalPages,
+        @JsonProperty(value = "hasNext", required = true) @NotNull
+        Boolean hasNext
+    ) {}
+
     public enum RequestState {
         @JsonProperty("ACCEPTED") ACCEPTED,
         @JsonProperty("IN_PROGRESS") IN_PROGRESS,
@@ -482,6 +679,48 @@ public final class PublicApi {
 
     public enum TurnReferenceGranularity {
         @JsonProperty("TURN") TURN
+    }
+
+    public enum UserRole {
+        @JsonProperty("USER") USER,
+        @JsonProperty("ADMIN") ADMIN
+    }
+
+    public enum UserStatus {
+        @JsonProperty("ACTIVE") ACTIVE,
+        @JsonProperty("DISABLED") DISABLED
+    }
+
+    public enum ThemePreference {
+        @JsonProperty("LIGHT") LIGHT,
+        @JsonProperty("DARK") DARK,
+        @JsonProperty("SYSTEM") SYSTEM
+    }
+
+    public enum ProjectStatus {
+        @JsonProperty("ACTIVE") ACTIVE,
+        @JsonProperty("ARCHIVED") ARCHIVED,
+        @JsonProperty("DELETING") DELETING,
+        @JsonProperty("DELETED") DELETED
+    }
+
+    public enum ProjectWritableStatus {
+        @JsonProperty("ACTIVE") ACTIVE,
+        @JsonProperty("ARCHIVED") ARCHIVED
+    }
+
+    public enum ConversationStatus {
+        @JsonProperty("ACTIVE") ACTIVE,
+        @JsonProperty("ARCHIVED") ARCHIVED,
+        @JsonProperty("LOCKED_READONLY") LOCKED_READONLY,
+        @JsonProperty("DELETING") DELETING
+    }
+
+    public enum StageViewStatus {
+        @JsonProperty("ACTIVE") ACTIVE,
+        @JsonProperty("LOCKED_READONLY") LOCKED_READONLY,
+        @JsonProperty("DELETION_PREPARING") DELETION_PREPARING,
+        @JsonProperty("DELETING") DELETING
     }
 
 }

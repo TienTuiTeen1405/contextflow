@@ -10,8 +10,8 @@ export default function ProjectsPage() {
       <div className="mt-8 rounded-2xl border border-dashed border-border bg-white p-10">
         <h2 className="font-semibold">Không gian dự án đang được xây dựng</h2>
         <p className="mt-2 text-slate-600">
-          Danh sách và thao tác tạo dự án sẽ xuất hiện khi chức năng tài khoản
-          và Project sẵn sàng.
+          Danh sách và thao tác tạo dự án sẽ xuất hiện khi hoàn tất giao diện
+          quản lý dự án.
         </p>
       </div>
     </main>

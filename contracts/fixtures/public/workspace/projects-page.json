@@ -1,0 +1,18 @@
+{
+  "items": [
+    {
+      "id": "10000000-0000-4000-8000-000000000001",
+      "name": "Bản demo ContextFlow",
+      "description": "Dự án dùng để ghép giao diện.",
+      "projectIntelligenceEnabled": true,
+      "status": "ACTIVE",
+      "createdAt": "2026-11-26T00:00:00Z",
+      "updatedAt": "2026-11-26T00:00:00Z"
+    }
+  ],
+  "page": 0,
+  "size": 20,
+  "totalElements": 1,
+  "totalPages": 1,
+  "hasNext": false
+}

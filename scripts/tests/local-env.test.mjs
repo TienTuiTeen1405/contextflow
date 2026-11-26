@@ -70,3 +70,26 @@ test("existing placeholder credentials are rejected instead of silently rotating
   );
   await assert.rejects(setupLocal(root, "ide"), /never rotates/);
 });
+
+test("demo is opt-in and returning to normal preserves credentials and other profiles", async (t) => {
+  const root = await workspace(t);
+  await setupLocal(root, "ide", { demo: true });
+  let core = await readEnv(path.join(root, "core-backend/.env"));
+  assert.equal(core.SPRING_PROFILES_ACTIVE, "demo");
+  assert.equal(core.CF_SERVER_ADDRESS, "127.0.0.1");
+  const password = core.CF_DB_PASSWORD;
+  await writeFile(
+    path.join(root, "core-backend/.env"),
+    "SPRING_PROFILES_ACTIVE=dev,demo\nCF_CREDENTIAL_KEK_V1=" +
+      core.CF_CREDENTIAL_KEK_V1 +
+      "\n",
+  );
+  await setupLocal(root, "docker");
+  core = await readEnv(path.join(root, "core-backend/.env"));
+  assert.equal(core.SPRING_PROFILES_ACTIVE, "dev");
+  assert.equal(core.CF_DB_PASSWORD, password);
+  assert.equal(
+    (await readEnv(path.join(root, "web/.env.local"))).NEXT_PUBLIC_CORE_API_URL,
+    "http://localhost:8080",
+  );
+});

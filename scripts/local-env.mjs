@@ -48,7 +48,7 @@ async function writeEnv(file, values) {
   await writeFile(file, content, { mode: 0o600 });
 }
 const placeholder = (s) => !s || s.startsWith("replace-with-");
-export async function setupLocal(root, mode = "docker") {
+export async function setupLocal(root, mode = "docker", { demo = false } = {}) {
   if (!["docker", "ide"].includes(mode))
     throw new Error("Mode must be docker or ide");
   const infraFile = path.join(root, "infra/.env");
@@ -78,6 +78,14 @@ export async function setupLocal(root, mode = "docker") {
     throw new Error("Invalid POSTGRES_PORT");
   const coreFile = path.join(root, "core-backend/.env");
   const core = await readEnv(coreFile);
+  const profiles = (core.SPRING_PROFILES_ACTIVE ?? "")
+    .split(",")
+    .map((p) => p.trim())
+    .filter((p) => p && p !== "demo");
+  if (demo) profiles.push("demo");
+  if (profiles.length) core.SPRING_PROFILES_ACTIVE = profiles.join(",");
+  else delete core.SPRING_PROFILES_ACTIVE;
+  if (demo) core.CF_SERVER_ADDRESS = "127.0.0.1";
   const kek = placeholder(core.CF_CREDENTIAL_KEK_V1)
     ? randomBytes(32).toString("base64")
     : core.CF_CREDENTIAL_KEK_V1;
@@ -116,6 +124,7 @@ export async function setupLocal(root, mode = "docker") {
   });
   return {
     mode,
+    demo,
     coreUrl: "http://localhost:" + (mode === "ide" ? "18080" : "8080"),
   };
 }

@@ -1,0 +1,15 @@
+{
+  "personalIntelligenceEnabled": true,
+  "personalProfileText": null,
+  "personalInstructions": null,
+  "personalSkills": [
+    {
+      "id": "40000000-0000-4000-8000-000000000001",
+      "name": "Trả lời tiếng Việt",
+      "description": "Kỹ năng cá nhân mẫu.",
+      "content": "Trả lời ngắn gọn bằng tiếng Việt.",
+      "priority": 100,
+      "isEnabled": true
+    }
+  ]
+}

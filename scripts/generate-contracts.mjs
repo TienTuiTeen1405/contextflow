@@ -29,6 +29,54 @@ async function output(p, content, parser) {
 const publicSpec = await readJson("contracts/public.openapi.json");
 const internalSpec = await readJson("contracts/internal.openapi.json");
 const errors = (await readJson("contracts/error-codes.json")).errors;
+function demoReferences(value) {
+  if (Array.isArray(value)) return value.map(demoReferences);
+  if (value && typeof value === "object")
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [
+        key,
+        key === "$ref" &&
+        typeof item === "string" &&
+        item.startsWith("#/components/")
+          ? "./public.openapi.json" + item
+          : demoReferences(item),
+      ]),
+    );
+  return value;
+}
+const demoPaths = {};
+for (const [route, item] of Object.entries(publicSpec.paths)) {
+  const methods = Object.fromEntries(
+    Object.entries(item)
+      .filter(([, operation]) =>
+        operation["x-implementation-status"]?.startsWith(
+          "implemented under demo",
+        ),
+      )
+      .map(([method, operation]) => [
+        method,
+        { ...demoReferences(operation), security: [] },
+      ]),
+  );
+  if (Object.keys(methods).length) demoPaths[route] = methods;
+}
+await output(
+  "contracts/demo.openapi.json",
+  JSON.stringify({
+    openapi: "3.1.0",
+    info: {
+      title: "ContextFlow single-user local demo",
+      version: publicSpec.info.version,
+      description:
+        "Generated demo-only view. Explicit demo profile, fixed USER, no JWT. Default Core stays closed.",
+    },
+    servers: publicSpec.servers,
+    security: [],
+    paths: demoPaths,
+    "x-derived-from": "public.openapi.json",
+  }),
+  "json",
+);
 await output(
   "web/src/lib/api/generated/public.ts",
   astToString(await openapiTS(publicSpec)),
@@ -89,6 +137,7 @@ function javaModule(spec, name) {
       ];
     if (required && !nullable(p)) a.push("@NotNull");
     if (!required) a.push("@JsonInclude(JsonInclude.Include.NON_NULL)");
+    if (!required && !nullable(p)) a.push("@NonNullIfPresent");
     if (b.minimum !== undefined) a.push("@Min(" + b.minimum + ")");
     if (b.maximum !== undefined) a.push("@Max(" + b.maximum + ")");
     if (typeof b.const === "number")
@@ -119,7 +168,15 @@ function javaModule(spec, name) {
         );
     }
     if (b.pattern && !["uuid", "date-time"].includes(b.format))
-      a.push("@Pattern(regexp = " + JSON.stringify(b.pattern) + ")");
+      a.push(
+        "@Pattern(regexp = " +
+          JSON.stringify(
+            b.pattern.startsWith("^") && b.pattern.endsWith("$")
+              ? b.pattern
+              : "(?s).*(?:" + b.pattern + ").*",
+          ) +
+          ")",
+      );
     if (typeof b.const === "string")
       a.push("@Pattern(regexp = " + JSON.stringify("^" + b.const + "$") + ")");
     if (b.$ref || b.type === "array") a.push("@Valid");
@@ -134,6 +191,7 @@ function javaModule(spec, name) {
     "import jakarta.validation.Valid;\n" +
     "import jakarta.validation.constraints.*;\n" +
     "import com.contextflow.contracts.CodePointSize;\n" +
+    "import com.contextflow.contracts.NonNullIfPresent;\n" +
     "import java.time.Instant;\nimport java.util.List;\nimport java.util.UUID;\n\n" +
     '@Generated("scripts/generate-contracts.mjs")\npublic final class ' +
     name +

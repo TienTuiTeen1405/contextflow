@@ -7,6 +7,7 @@ import jakarta.annotation.Generated;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import com.contextflow.contracts.CodePointSize;
+import com.contextflow.contracts.NonNullIfPresent;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -204,9 +205,9 @@ public final class InternalAi {
         String primaryIntent,
         @JsonProperty(value = "time_scope", required = true) @NotNull
         IntentContextTimeScope timeScope,
-        @JsonProperty(value = "resolved_entities", required = false) @JsonInclude(JsonInclude.Include.NON_NULL) @Valid
+        @JsonProperty(value = "resolved_entities", required = false) @JsonInclude(JsonInclude.Include.NON_NULL) @NonNullIfPresent @Valid
         List<String> resolvedEntities,
-        @JsonProperty(value = "exact_lookup", required = false) @JsonInclude(JsonInclude.Include.NON_NULL)
+        @JsonProperty(value = "exact_lookup", required = false) @JsonInclude(JsonInclude.Include.NON_NULL) @NonNullIfPresent
         Boolean exactLookup
     ) {}
 

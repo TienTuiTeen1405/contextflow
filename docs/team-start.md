@@ -2,6 +2,8 @@
 
 ## Các gói có thể bắt đầu song song
 
+Ưu tiên demo hiện tại: hai thành viên chủ chốt nối Chat/Core–AI và tích hợp Web; ba thành viên còn lại có thể xây giao diện Project, danh sách/đổi tên Conversation, và hồ sơ/theme/Personal Skills trên API thật trong [Demo Mode](demo.md). DTO/type sinh cùng 19 mẫu workspace đã có trong `contracts/fixtures/public/workspace`. Chưa gán tên thành viên. Auth/JWT hoãn; Credential thật, worker/SSE và pipeline Chat vẫn cần nhóm chủ chốt triển khai.
+
 | Gói                   | Vị trí sở hữu                                            | Đầu ra đầu tiên                                                                    | Phụ thuộc                                                       |
 | --------------------- | -------------------------------------------------------- | ---------------------------------------------------------------------------------- | --------------------------------------------------------------- |
 | Data foundation       | `core-backend/src/main/resources/db/migration`           | V001–V005 đã tích hợp; tiếp tục repository/query và migration V006+ khi cần        | Dùng schema 43 bảng từ 03-5; không sửa checksum V001–V005       |

@@ -22,6 +22,7 @@
 - DDL qua Flyway; không sửa migration đã chạy chung. Không dùng Hibernate auto-create/update.
 - Không log Authorization, X-Provider-Credential, secret, DEK/KEK, raw prompt hoặc provider payload.
 - Security hiện deny-by-default. Nhóm Identity thay bằng JWT/ownership có kiểm thử, không dùng permitAll cho toàn bộ API.
+- Theo yêu cầu demo ngày 26/11/2026, profile `demo` dùng principal USER cố định và chỉ mở workspace cơ bản. Auth/JWT được hoãn; không mở rộng ngoại lệ này sang profile mặc định hoặc admin. Xem `docs/demo.md`.
 
 ## AI Service
 

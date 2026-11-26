@@ -15,9 +15,15 @@ const business = await fetch(base + "/api/v1/projects", {
   signal: AbortSignal.timeout(10000),
 });
 const body = await business.json();
+const demo = business.headers.get("X-ContextFlow-Mode") === "DEMO";
+if (process.argv.includes("--demo") && !demo)
+  throw new Error(
+    "Demo profile is not active; restart Core with the demo preset",
+  );
 if (
-  business.status !== 401 ||
-  body.error?.code !== "UNAUTHENTICATED" ||
+  (demo
+    ? business.status !== 200 || !Array.isArray(body.items)
+    : business.status !== 401 || body.error?.code !== "UNAUTHENTICATED") ||
   business.headers.get("access-control-allow-origin") !==
     "http://localhost:3000"
 ) {
@@ -26,8 +32,24 @@ if (
 console.log(
   "PASS Web configuration -> Core " +
     base +
-    ": readiness, auth envelope and CORS",
+    (demo
+      ? ": readiness, demo workspace and CORS"
+      : ": readiness, auth envelope and CORS"),
 );
+if (demo) {
+  const profile = await fetch(base + "/api/v1/me", {
+    signal: AbortSignal.timeout(10000),
+  });
+  const user = await profile.json();
+  if (
+    !profile.ok ||
+    user.id !== "d0000000-0000-4000-8000-000000000001" ||
+    user.role !== "USER" ||
+    user.hasLocalPassword !== false
+  )
+    throw new Error("Unexpected demo identity");
+  console.log("PASS fixed DemoUser without JWT");
+}
 if (base.endsWith(":18080")) {
   const ai = await readEnv(path.join(ROOT, "ai-service/.env"));
   const response = await fetch("http://127.0.0.1:18000/internal/v1/ai/status", {
