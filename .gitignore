@@ -37,3 +37,6 @@ agent/
 # JVM crash logs
 hs_err_pid*
 replay_pid*
+
+# AGENTS.md
+/AGENTS.md
