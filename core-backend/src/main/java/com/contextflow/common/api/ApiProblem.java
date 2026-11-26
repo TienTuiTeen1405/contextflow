@@ -1,7 +1,5 @@
 package com.contextflow.common.api;
 
-import com.contextflow.contracts.generated.PublicApi.ErrorCode;
-
 public final class ApiProblem extends RuntimeException {
     private final ErrorCode code;
 

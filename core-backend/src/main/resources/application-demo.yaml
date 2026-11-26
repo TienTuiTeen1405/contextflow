@@ -1,3 +1,0 @@
-# Explicit local single-user demo. The normal profile keeps deny-by-default security.
-server:
-  address: ${CF_SERVER_ADDRESS:127.0.0.1}

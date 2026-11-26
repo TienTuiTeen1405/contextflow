@@ -11,8 +11,6 @@
     "npm": ">=11 <12"
   },
   "scripts": {
-    "demo:up": "npm run setup:local -- --mode docker --demo && docker compose --env-file infra/.env -f infra/compose.yaml -f infra/compose.demo.yaml up -d --build --wait --wait-timeout 180",
-    "demo:check": "node scripts/check-local.mjs --demo",
     "setup:local": "node scripts/setup-local.mjs",
     "dev:core": "node scripts/dev-core.mjs",
     "local:check": "node scripts/check-local.mjs",

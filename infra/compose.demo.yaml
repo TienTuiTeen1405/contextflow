@@ -1,6 +1,0 @@
-# Explicit local single-user demo. Base published ports remain bound to 127.0.0.1.
-services:
-  core-backend:
-    environment:
-      SPRING_PROFILES_ACTIVE: demo
-      CF_SERVER_ADDRESS: 0.0.0.0

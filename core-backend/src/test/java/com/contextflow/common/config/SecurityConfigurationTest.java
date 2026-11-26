@@ -15,7 +15,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 @WebMvcTest(
         controllers = SecurityConfigurationTest.ProbeController.class,
-        properties = "contextflow.web.allowed-origins=http://localhost:3000")
+        properties = {
+            "contextflow.web.allowed-origins=http://localhost:3000",
+            "CF_LOCAL_ENV_IMPORT=optional:classpath:/test-no-local-env.properties"
+        })
 @Import({
     SecurityConfiguration.class,
     CorrelationIdFilter.class,

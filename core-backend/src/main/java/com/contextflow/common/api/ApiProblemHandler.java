@@ -1,6 +1,5 @@
 package com.contextflow.common.api;
 
-import com.contextflow.contracts.generated.PublicApi.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import java.util.UUID;
