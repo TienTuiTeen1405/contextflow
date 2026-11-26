@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, writeFile, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
 import { readEnv, setupLocal } from "../local-env.mjs";
@@ -31,7 +31,7 @@ test("fresh clone gets shared local secrets without leaking them to Web/AI", asy
     "CF_INTERNAL_SERVICE_TOKEN",
     "CF_PROVIDER_MODE",
   ]);
-  assert.deepEqual(web, { NEXT_PUBLIC_CORE_API_URL: "http://localhost:8080" });
+  assert.deepEqual(web, { NEXT_PUBLIC_CORE_API_URL: "http://localhost:18080" });
   assert.equal(Buffer.from(core.CF_CREDENTIAL_KEK_V1, "base64").length, 32);
 });
 test("switching to IDE preserves DB credentials and custom settings", async (t) => {
@@ -48,6 +48,10 @@ test("switching to IDE preserves DB credentials and custom settings", async (t) 
   const core = await readEnv(path.join(root, "core-backend/.env"));
   assert.equal(core.CF_DB_PASSWORD, "existing secret # value");
   assert.equal(core.CF_DB_PASSWORD, infra.POSTGRES_PASSWORD);
+  assert.match(
+    await readFile(path.join(root, "core-backend/.env"), "utf8"),
+    /CF_DB_PASSWORD=existing\\u0020secret\\u0020\\u0023\\u0020value/,
+  );
   assert.equal(core.CF_DB_URL, "jdbc:postgresql://127.0.0.1:25432/contextflow");
   assert.equal(core.CF_AI_BASE_URL, "http://127.0.0.1:18000");
   assert.deepEqual(await readEnv(path.join(root, "web/.env.local")), {
@@ -71,23 +75,21 @@ test("existing placeholder credentials are rejected instead of silently rotating
   await assert.rejects(setupLocal(root, "ide"), /never rotates/);
 });
 
-test("demo is opt-in and returning to normal preserves credentials and other profiles", async (t) => {
+test("setup removes the legacy demo profile while preserving credentials and other profiles", async (t) => {
   const root = await workspace(t);
-  await setupLocal(root, "ide", { demo: true });
-  let core = await readEnv(path.join(root, "core-backend/.env"));
-  assert.equal(core.SPRING_PROFILES_ACTIVE, "demo");
-  assert.equal(core.CF_SERVER_ADDRESS, "127.0.0.1");
-  const password = core.CF_DB_PASSWORD;
+  await setupLocal(root, "ide");
+  const previous = await readEnv(path.join(root, "core-backend/.env"));
   await writeFile(
     path.join(root, "core-backend/.env"),
     "SPRING_PROFILES_ACTIVE=dev,demo\nCF_CREDENTIAL_KEK_V1=" +
-      core.CF_CREDENTIAL_KEK_V1 +
+      previous.CF_CREDENTIAL_KEK_V1 +
       "\n",
   );
   await setupLocal(root, "docker");
-  core = await readEnv(path.join(root, "core-backend/.env"));
+  const core = await readEnv(path.join(root, "core-backend/.env"));
   assert.equal(core.SPRING_PROFILES_ACTIVE, "dev");
-  assert.equal(core.CF_DB_PASSWORD, password);
+  assert.equal(core.CF_DB_PASSWORD, previous.CF_DB_PASSWORD);
+  assert.equal(core.CF_CREDENTIAL_KEK_V1, previous.CF_CREDENTIAL_KEK_V1);
   assert.equal(
     (await readEnv(path.join(root, "web/.env.local"))).NEXT_PUBLIC_CORE_API_URL,
     "http://localhost:8080",

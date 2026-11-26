@@ -7,6 +7,8 @@ export const ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
 );
+const propertiesHeader =
+  "# Generated local configuration (Java properties). Never commit this file.";
 export async function readEnv(file) {
   let text;
   try {
@@ -16,13 +18,18 @@ export async function readEnv(file) {
     throw error;
   }
   const result = {};
+  const properties = text.startsWith(propertiesHeader);
   for (const line of text.split(/\r?\n/)) {
     if (!line.trim() || line.trimStart().startsWith("#")) continue;
     const match = line.match(/^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
     if (!match)
       throw new Error("Invalid environment line in " + path.basename(file));
     let value = match[2].trim();
-    if (value.startsWith('"')) value = JSON.parse(value);
+    if (properties)
+      value = value.replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) =>
+        String.fromCharCode(parseInt(hex, 16)),
+      );
+    else if (value.startsWith('"')) value = JSON.parse(value);
     else if (value.startsWith("'") && value.endsWith("'"))
       value = value.slice(1, -1);
     else value = value.replace(/\s+#.*$/, "").trimEnd();
@@ -30,25 +37,34 @@ export async function readEnv(file) {
   }
   return result;
 }
-async function writeEnv(file, values) {
+async function writeEnv(file, values, properties = false) {
   await mkdir(path.dirname(file), { recursive: true });
   const content =
-    "# Generated local configuration. Never commit this file.\n" +
+    (properties
+      ? propertiesHeader
+      : "# Generated local configuration. Never commit this file.") +
+    "\n" +
     Object.entries(values)
       .map(
         ([key, value]) =>
           key +
           "=" +
-          (/^[A-Za-z0-9_./:,@=+\-]+$/.test(value)
-            ? value
-            : JSON.stringify(value)),
+          (properties
+            ? value.replace(
+                /[^A-Za-z0-9_./:,@=+\-]/g,
+                (character) =>
+                  "\\u" + character.charCodeAt(0).toString(16).padStart(4, "0"),
+              )
+            : /^[A-Za-z0-9_./:,@=+\-]+$/.test(value)
+              ? value
+              : JSON.stringify(value)),
       )
       .join("\n") +
     "\n";
   await writeFile(file, content, { mode: 0o600 });
 }
 const placeholder = (s) => !s || s.startsWith("replace-with-");
-export async function setupLocal(root, mode = "docker", { demo = false } = {}) {
+export async function setupLocal(root, mode = "ide") {
   if (!["docker", "ide"].includes(mode))
     throw new Error("Mode must be docker or ide");
   const infraFile = path.join(root, "infra/.env");
@@ -82,30 +98,32 @@ export async function setupLocal(root, mode = "docker", { demo = false } = {}) {
     .split(",")
     .map((p) => p.trim())
     .filter((p) => p && p !== "demo");
-  if (demo) profiles.push("demo");
   if (profiles.length) core.SPRING_PROFILES_ACTIVE = profiles.join(",");
   else delete core.SPRING_PROFILES_ACTIVE;
-  if (demo) core.CF_SERVER_ADDRESS = "127.0.0.1";
   const kek = placeholder(core.CF_CREDENTIAL_KEK_V1)
     ? randomBytes(32).toString("base64")
     : core.CF_CREDENTIAL_KEK_V1;
-  await writeEnv(coreFile, {
-    ...core,
-    CF_DB_URL:
-      "jdbc:postgresql://127.0.0.1:" +
-      port +
-      "/" +
-      encodeURIComponent(infra.POSTGRES_DB ?? "contextflow"),
-    CF_DB_USERNAME: infra.POSTGRES_USER ?? "contextflow",
-    CF_DB_PASSWORD: infra.POSTGRES_PASSWORD,
-    CF_CORE_PORT: "18080",
-    CF_AI_BASE_URL: "http://127.0.0.1:18000",
-    CF_WEB_ALLOWED_ORIGINS:
-      infra.CF_WEB_ALLOWED_ORIGINS ??
-      "http://localhost:3000,http://127.0.0.1:3000",
-    CF_INTERNAL_SERVICE_TOKEN: infra.CF_INTERNAL_SERVICE_TOKEN,
-    CF_CREDENTIAL_KEK_V1: kek,
-  });
+  await writeEnv(
+    coreFile,
+    {
+      ...core,
+      CF_DB_URL:
+        "jdbc:postgresql://127.0.0.1:" +
+        port +
+        "/" +
+        encodeURIComponent(infra.POSTGRES_DB ?? "contextflow"),
+      CF_DB_USERNAME: infra.POSTGRES_USER ?? "contextflow",
+      CF_DB_PASSWORD: infra.POSTGRES_PASSWORD,
+      CF_CORE_PORT: "18080",
+      CF_AI_BASE_URL: "http://127.0.0.1:18000",
+      CF_WEB_ALLOWED_ORIGINS:
+        infra.CF_WEB_ALLOWED_ORIGINS ??
+        "http://localhost:3000,http://127.0.0.1:3000",
+      CF_INTERNAL_SERVICE_TOKEN: infra.CF_INTERNAL_SERVICE_TOKEN,
+      CF_CREDENTIAL_KEK_V1: kek,
+    },
+    true,
+  );
   const aiFile = path.join(root, "ai-service/.env");
   const ai = await readEnv(aiFile);
   if (Object.keys(ai).some((k) => /DB_|DATABASE|KEK/.test(k))) {
@@ -124,7 +142,6 @@ export async function setupLocal(root, mode = "docker", { demo = false } = {}) {
   });
   return {
     mode,
-    demo,
     coreUrl: "http://localhost:" + (mode === "ide" ? "18080" : "8080"),
   };
 }

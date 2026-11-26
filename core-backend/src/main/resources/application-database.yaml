@@ -1,0 +1,27 @@
+# Imported in every runtime mode; no extra database profile is required.
+spring:
+  datasource:
+    url: ${CF_DB_URL:jdbc:postgresql://localhost:15432/contextflow}
+    username: ${CF_DB_USERNAME:contextflow}
+    password: ${CF_DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 10
+      connection-timeout: 5000
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: contextflow
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+    url: ${CF_FLYWAY_URL:${CF_DB_URL:jdbc:postgresql://localhost:15432/contextflow}}
+    user: ${CF_FLYWAY_USERNAME:${CF_DB_USERNAME:contextflow}}
+    password: ${CF_FLYWAY_PASSWORD:${CF_DB_PASSWORD}}
+    default-schema: contextflow
+    schemas: contextflow
+    locations: classpath:db/migration
+    clean-disabled: true

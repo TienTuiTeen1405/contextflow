@@ -45,6 +45,7 @@ services:
       CF_DB_USERNAME: ${POSTGRES_USER:-contextflow}
       CF_DB_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in infra/.env}
       CF_AI_BASE_URL: http://ai-service:8000
+      CF_SERVER_ADDRESS: 0.0.0.0
       CF_INTERNAL_SERVICE_TOKEN: ${CF_INTERNAL_SERVICE_TOKEN:?Set CF_INTERNAL_SERVICE_TOKEN in infra/.env}
       CF_WEB_ALLOWED_ORIGINS: ${CF_WEB_ALLOWED_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
     ports:
