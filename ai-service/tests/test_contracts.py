@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+import yaml  # type: ignore[import-untyped]
 from fastapi.testclient import TestClient
 from jsonschema import Draft202012Validator, FormatChecker
 
@@ -27,7 +28,9 @@ def sample(file: str) -> dict[str, Any]:
 
 
 def validate(document: str, schema: str, value: object) -> None:
-    spec = json.loads((ROOT / "contracts" / f"{document}.openapi.json").read_text(encoding="utf-8"))
+    spec = yaml.safe_load(
+        (ROOT / "contracts" / f"{document}.openapi.yaml").read_text(encoding="utf-8")
+    )
     Draft202012Validator(
         {"$ref": f"#/components/schemas/{schema}", "components": spec["components"]},
         format_checker=FormatChecker(),
@@ -68,7 +71,7 @@ def test_public_sse_has_one_terminal_no_secret_and_monotonic_ids(file: str) -> N
         "password_hash",
     ):
         assert forbidden not in wire
-    spec = json.loads((ROOT / "contracts/public.openapi.json").read_text(encoding="utf-8"))
+    spec = yaml.safe_load((ROOT / "contracts/public.openapi.yaml").read_text(encoding="utf-8"))
     frames = [f for f in wire.split("\n\n") if f.startswith("id:")]
     terminal = {"assistant.completed", "request.failed", "request.cancelled"}
     events = []

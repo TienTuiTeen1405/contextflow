@@ -1,9 +1,9 @@
 """Export the actual FastAPI models plus the internal stream event schemas."""
 
-import json
 import sys
 from pathlib import Path
 
+import yaml  # type: ignore[import-untyped]
 from pydantic import RootModel
 
 from app.main import app
@@ -48,12 +48,12 @@ def contract() -> dict[str, object]:
 
 
 if __name__ == "__main__":
-    destination = Path(__file__).resolve().parents[2] / "contracts" / "internal.openapi.json"
-    content = json.dumps(contract(), ensure_ascii=False, indent=2) + "\n"
+    destination = Path(__file__).resolve().parents[2] / "contracts" / "internal.openapi.yaml"
+    content: str = yaml.safe_dump(contract(), sort_keys=False, allow_unicode=True, width=1000)
     if "--check" in sys.argv:
         if (
             not destination.exists()
-            or json.loads(destination.read_text(encoding="utf-8")) != contract()
+            or yaml.safe_load(destination.read_text(encoding="utf-8")) != contract()
         ):
             raise SystemExit("Internal OpenAPI drift: run npm run contracts:generate")
     else:

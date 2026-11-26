@@ -19,8 +19,8 @@
 # /core-backend/src/main/java/com/contextflow/contracts/ integration-maintainer + core-platform
 # /core-backend/src/main/java/com/contextflow/common/ integration-maintainer + core-platform
 # /contracts/ integration-maintainer + core-platform + web-lead + ai-lead
-# /contracts/public.openapi.json core-platform + web-lead
-# /contracts/internal.openapi.json core-ai + ai-lead
+# /contracts/public.openapi.yaml core-platform + web-lead
+# /contracts/internal.openapi.yaml core-ai + ai-lead
 # /core-backend/src/main/resources/db/migration/ data-maintainer + core-platform
 # /infra/ integration-maintainer + data-maintainer
 # /.github/ integration-maintainer

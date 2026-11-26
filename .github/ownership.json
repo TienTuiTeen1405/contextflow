@@ -119,11 +119,11 @@
       ]
     },
     {
-      "pattern": "/contracts/public.openapi.json",
+      "pattern": "/contracts/public.openapi.yaml",
       "requiredReviewRoles": ["core-platform", "web-lead"]
     },
     {
-      "pattern": "/contracts/internal.openapi.json",
+      "pattern": "/contracts/internal.openapi.yaml",
       "requiredReviewRoles": ["core-ai", "ai-lead"]
     },
     {
@@ -148,7 +148,7 @@
       "table": "users",
       "domain": "identity",
       "javaPackage": "com.contextflow.identity",
-      "entity": "User",
+      "entity": "UserEntity",
       "repository": "UserRepository",
       "ownerRole": "core-identity",
       "requiredReviewRoles": ["core-identity", "data-maintainer"]
@@ -175,7 +175,7 @@
       "table": "personal_skills",
       "domain": "identity",
       "javaPackage": "com.contextflow.identity",
-      "entity": "PersonalSkill",
+      "entity": "PersonalSkillEntity",
       "repository": "PersonalSkillRepository",
       "ownerRole": "core-identity",
       "requiredReviewRoles": ["core-identity", "data-maintainer"]
@@ -247,7 +247,7 @@
       "table": "projects",
       "domain": "project",
       "javaPackage": "com.contextflow.project",
-      "entity": "Project",
+      "entity": "ProjectEntity",
       "repository": "ProjectRepository",
       "ownerRole": "core-workspace",
       "requiredReviewRoles": ["core-workspace", "data-maintainer"]
@@ -292,7 +292,7 @@
       "table": "conversations",
       "domain": "conversation",
       "javaPackage": "com.contextflow.conversation",
-      "entity": "Conversation",
+      "entity": "ConversationEntity",
       "repository": "ConversationRepository",
       "ownerRole": "core-workspace",
       "requiredReviewRoles": ["core-workspace", "data-maintainer"]
