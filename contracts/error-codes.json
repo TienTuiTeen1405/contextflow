@@ -1,0 +1,183 @@
+{
+  "source": {
+    "pageId": "1704081",
+    "version": 7
+  },
+  "errors": [
+    {
+      "code": "VALIDATION_ERROR",
+      "httpStatus": 400,
+      "sse": false,
+      "retryable": false,
+      "description": "Sai cú pháp JSON, thiếu trường bắt buộc hoặc vi phạm định dạng DTO -\\> hiển thị lỗi theo trường."
+    },
+    {
+      "code": "INVALID_SSE_CURSOR",
+      "httpStatus": 400,
+      "sse": false,
+      "retryable": false,
+      "description": "Header `Last-Event-ID` / query `cursor` âm, không phải số hoặc lớn hơn `lastEventId` đã commit."
+    },
+    {
+      "code": "UNAUTHENTICATED",
+      "httpStatus": 401,
+      "sse": false,
+      "retryable": false,
+      "description": "JWT thiếu, sai chữ ký hoặc hết hạn -\\> chạy `POST /auth/refresh` một lần hoặc chuyển màn hình đăng nhập."
+    },
+    {
+      "code": "ACCOUNT_DISABLED",
+      "httpStatus": 403,
+      "sse": false,
+      "retryable": false,
+      "description": "Tài khoản đã bị Admin vô hiệu hóa (`USR-01`) -\\> abort SSE, xóa cache và đăng xuất."
+    },
+    {
+      "code": "FORBIDDEN",
+      "httpStatus": 403,
+      "sse": false,
+      "retryable": false,
+      "description": "Không sở hữu tài nguyên hoặc thiếu vai trò `ADMIN`."
+    },
+    {
+      "code": "RESOURCE_NOT_FOUND",
+      "httpStatus": 404,
+      "sse": false,
+      "retryable": false,
+      "description": "Không tìm thấy tài nguyên trong phạm vi quyền."
+    },
+    {
+      "code": "PROJECT_DELETING",
+      "httpStatus": 409,
+      "sse": false,
+      "retryable": false,
+      "description": "Project đang `DELETING` (`CF-DEC-017`) -\\> đóng Workspace, xóa cache Project và hủy SSE."
+    },
+    {
+      "code": "CHAT_SCOPE_LOCKED",
+      "httpStatus": 409,
+      "sse": false,
+      "retryable": false,
+      "description": "Main Stage / Conversation / Branch đang `LOCKED_READONLY` hoặc `DELETION_PREPARING`."
+    },
+    {
+      "code": "IDEMPOTENCY_KEY_REUSED",
+      "httpStatus": 409,
+      "sse": false,
+      "retryable": false,
+      "description": "Cùng `Idempotency-Key` nhưng khác canonical payload (`CF-DEC-050`)."
+    },
+    {
+      "code": "CHAT_REQUEST_IN_PROGRESS",
+      "httpStatus": 409,
+      "sse": false,
+      "retryable": true,
+      "description": "Tuyến hiện tại đang có Chat Request `ACCEPTED`/`IN_PROGRESS` (hoặc lệnh đổi topology gặp request mở)."
+    },
+    {
+      "code": "CONFLICT_STALE_REVISION",
+      "httpStatus": 409,
+      "sse": false,
+      "retryable": false,
+      "description": "Nguồn thay đổi giữa bước preview và confirm (`source_fingerprint` / `expected_revision` lệch) -\\> refetch và xác nhận lại."
+    },
+    {
+      "code": "SOURCE_DELETED",
+      "httpStatus": 410,
+      "sse": false,
+      "retryable": false,
+      "description": "Nguồn hội thoại đã bị xóa thực sự, chỉ còn metadata `tombstones` (`CF-DEC-015`)."
+    },
+    {
+      "code": "SSE_CURSOR_EXPIRED",
+      "httpStatus": 410,
+      "sse": false,
+      "retryable": false,
+      "description": "Cursor SSE đã quá TTL 24h sau terminal -\\> gọi `GET /api/v1/ai/requests/{id}` để đồng bộ Turn chuẩn (không `POST` lại)."
+    },
+    {
+      "code": "USER_CREDENTIAL_UNAVAILABLE",
+      "httpStatus": 422,
+      "sse": false,
+      "retryable": false,
+      "description": "Chưa cấu hình User Credential hoặc khóa `REMOVED`/`REVOKED` -\\> mở modal cài đặt khóa (không fallback sang Platform Key)."
+    },
+    {
+      "code": "DISCLOSURE_REQUIRED",
+      "httpStatus": 422,
+      "sse": true,
+      "retryable": false,
+      "description": "Chưa xác nhận cảnh báo Unpaid Services cho `FREE`/`UNKNOWN` hoặc mixed-tier -\\> mở modal xác nhận (`CF-DEC-044`)."
+    },
+    {
+      "code": "INVALID_EXPLICIT_REFERENCE",
+      "httpStatus": 422,
+      "sse": false,
+      "retryable": false,
+      "description": "`@Main` hoặc Quote Block sai phạm vi, nguồn xóa hoặc lệch `locator`/`revision`/`SHA-256` -\\> yêu cầu tải lại nguồn hoặc gỡ block."
+    },
+    {
+      "code": "EXPLICIT_REFERENCE_BUDGET_EXCEEDED",
+      "httpStatus": 422,
+      "sse": false,
+      "retryable": false,
+      "description": "Tổng `@Main` + Quote vượt trần Tầng 2 (khởi điểm 30% SoftCap) -\\> yêu cầu thu hẹp phạm vi, không cắt ngầm (`CF-DEC-048`)."
+    },
+    {
+      "code": "STAGE_CONTEXT_LIMIT",
+      "httpStatus": 422,
+      "sse": true,
+      "retryable": false,
+      "description": "Chuỗi native trên Main Stage vượt `SoftCap` sau cắt giảm xác định -\\> gợi ý thực hiện **Rollover** (`USR-10`)."
+    },
+    {
+      "code": "BRANCH_CONTEXT_LIMIT",
+      "httpStatus": 422,
+      "sse": true,
+      "retryable": false,
+      "description": "Chuỗi native trên Sub-Branch vượt `SoftCap` -\\> gợi ý mở Sub-Branch mới từ Main anchor (*không* hiện nút Rollover)."
+    },
+    {
+      "code": "APP_USAGE_LIMIT_EXCEEDED",
+      "httpStatus": 429,
+      "sse": false,
+      "retryable": false,
+      "description": "Vượt hạn mức ứng dụng do Admin cấu hình (`ADM-07`: token, số Rule/Skill hoặc dung lượng)."
+    },
+    {
+      "code": "PROVIDER_RATE_LIMITED",
+      "httpStatus": 429,
+      "sse": true,
+      "retryable": true,
+      "description": "Gemini trả HTTP 429 có thể phục hồi (RPM/TPM) -\\> hiển thị đếm ngược `retryAfterSeconds`."
+    },
+    {
+      "code": "PROVIDER_QUOTA_EXHAUSTED",
+      "httpStatus": 429,
+      "sse": true,
+      "retryable": false,
+      "description": "Hết hạn mức ngày (RPD) hoặc spend/billing cap -\\> dừng retry tự động, không đổi Key/Model để né trần."
+    },
+    {
+      "code": "PLATFORM_CREDENTIAL_UNAVAILABLE",
+      "httpStatus": 503,
+      "sse": true,
+      "retryable": false,
+      "description": "Chưa cấu hình Platform Credential hoặc khóa nền tảng đang `REMOVED`/`REVOKED`/`BLOCKED` (cấm fallback sang User Key)."
+    },
+    {
+      "code": "PROVIDER_UNAVAILABLE",
+      "httpStatus": 503,
+      "sse": true,
+      "retryable": true,
+      "description": "Gemini API tạm thời gián đoạn (HTTP 5xx/503, timeout mạng hoặc sự kiện `error` giữa stream) -\\> hiển thị thông báo an toàn."
+    },
+    {
+      "code": "WORKER_LEASE_EXPIRED",
+      "httpStatus": null,
+      "sse": true,
+      "retryable": false,
+      "description": "Worker xử lý Chat vượt quá thời hạn lease (khởi điểm 90s) và bị Sweeper thu hồi -\\> không tự phát lại Chat Call chưa rõ dispatch."
+    }
+  ]
+}

@@ -1,0 +1,109 @@
+{
+  "correlation_id": "64254ba2-ba13-4a15-af4b-8e262140d080",
+  "provider_call_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  "task_type": "CHAT_MAIN",
+  "provider_options": {
+    "model": "mock",
+    "api_interface": "INTERACTIONS",
+    "store": false,
+    "stream": true,
+    "timeout_seconds": 45
+  },
+  "prompt": {
+    "platform_policy": "Synthetic test policy.",
+    "current_user_request": {
+      "content_blocks": [
+        {
+          "type": "TEXT",
+          "text": "So sánh "
+        },
+        {
+          "type": "QUOTE_REF",
+          "quote_ref_id": "q1"
+        }
+      ]
+    },
+    "intelligence_context": {
+      "background": {
+        "project_information": null,
+        "personal_profile": null
+      },
+      "instructions": {
+        "mandatory_rules": [
+          {
+            "id": "rule_1",
+            "priority": 0,
+            "content": "Giữ nguyên nguồn."
+          }
+        ],
+        "overridable_rules": [],
+        "active_skills": [],
+        "personal_instructions": null
+      }
+    },
+    "knowledge_and_evidence": {
+      "history": [],
+      "knowledge_base": [],
+      "source_of_truth": [],
+      "explicit_references": [
+        {
+          "kind": "QUOTE",
+          "id": "q1",
+          "source_type": "MAIN_TURN",
+          "snapshot_text": "Nguồn mẫu.",
+          "source_revision": "1",
+          "authority": "EXPLICIT_REFERENCE"
+        }
+      ]
+    },
+    "response_instructions": {
+      "intent_context": {
+        "primary_intent": "COMPARE",
+        "time_scope": "HISTORICAL_OR_COMPARE",
+        "resolved_entities": [],
+        "exact_lookup": false
+      },
+      "evidence_sufficiency": "SUFFICIENT",
+      "retrieval_status": "COMPLETE",
+      "degraded_components": []
+    },
+    "continuity": [
+      {
+        "turn_ref": "t_1",
+        "user_text_blocks": [],
+        "historical_quotes": [
+          {
+            "quote_ref_id": "hq1",
+            "snapshot_text": "Trích dẫn lịch sử.",
+            "source_type": "MAIN_TURN"
+          }
+        ],
+        "native_output_steps": [
+          {
+            "type": "text",
+            "text": "Synthetic continuation.",
+            "extension": {
+              "z": 1,
+              "a": 2
+            },
+            "thought_signature": "fixture-only-signature"
+          }
+        ],
+        "user_content_blocks": [
+          {
+            "type": "TEXT",
+            "text": "Trước "
+          },
+          {
+            "type": "QUOTE_REF",
+            "quote_ref_id": "hq1"
+          },
+          {
+            "type": "TEXT",
+            "text": " sau."
+          }
+        ]
+      }
+    ]
+  }
+}

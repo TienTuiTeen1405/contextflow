@@ -20,6 +20,17 @@ Các kiểm tra scaffold không thay thế nghiệm thu tính năng Chat/Auth/KB
 - Build/cập nhật riêng Core Docker thành công. PostgreSQL development ghi 5 migration `success=true`, 43 bảng nghiệp vụ và 1 bảng history; registry có 8 tác vụ `gemini-3.8-flash` + 2 tác vụ `gemini-embedding-2`. Readiness Core tại `localhost:8080` trả `UP` sau migration.
 - Bổ sung cấu hình `CF_FLYWAY_*` để dùng tài khoản migration riêng; local mặc định dùng lại tài khoản development. Chưa provision tài khoản production hoặc nghiệm thu quyền DB trên môi trường triển khai.
 
+## Hợp đồng API, ownership và local presets — 26/11/2026
+
+- Nguồn: BranOS-04-1 v7, 04-2 v2 và 04-6 v2. Đã có public/internal OpenAPI 3.1, 25 mã lỗi, 25 fixture JSON, 7 public event và 4 internal event. Type Web và Java DTO sinh từ cùng nguồn; internal OpenAPI được xuất từ Pydantic/FastAPI thực tế.
+- Core `verify` trên JDK 21: 42 kiểm thử đạt (30 DTO/fixture/Unicode/null/registry + 10 database + 2 security), Spotless và JAR đạt. Lượt đầu thiếu Docker daemon đã được chạy lại sau khi khởi động Docker Desktop; không bỏ qua schema tests.
+- AI: Ruff lint/format, mypy và 49 pytest đạt; bao gồm bốn endpoint Mock qua HTTP, auth trước body, structured output, vector hữu hạn/chiều/count, usage null, opaque native JSON, lỗi/terminal stream và schema ref không gọi mạng. Có deprecation warning TestClient Starlette/httpx như trước.
+- Web: lint/typecheck, production build và Prettier toàn repo đạt. `contracts:check` xác nhận generated code và OpenAPI không lệch; dependency production audit báo 0 vulnerabilities.
+- Tooling: 3 kiểm thử setup local đạt; preset mới tạo secret đồng bộ, đổi Docker/IDE giữ DB password/KEK và từ chối tự xoay placeholder của DB đã tồn tại.
+- Ownership: đủ 43 bảng có domain/Entity/Repository và review role. Thành viên chưa được gán theo thông tin người dùng; CODEOWNERS thật chưa được tạo và không tuyên bố GitHub review đã được cưỡng chế.
+- Docker: các image Core, AI và Web build thành công; stack lên healthy. `local:check` xác nhận Web config → Core 8080, readiness UP, auth envelope và CORS. Các kết quả này xác nhận nền hợp đồng; không nghiệm thu business Chat/JWT/worker/public SSE hoặc PoC Gemini.
+- Repo chưa có remote: CI đã được khai báo/cập nhật, chưa có kết quả pipeline trên repository chung.
+
 ## Standards
 
 Review độc lập diff `c89341f...3ab23c7`: không có phát hiện cần sửa về quy ước code, Docker paths/users, CI, security defaults, ranh giới dịch vụ hoặc onboarding. Review đọc source; runtime được kiểm chứng riêng.

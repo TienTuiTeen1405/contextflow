@@ -1,0 +1,127 @@
+[
+  {
+    "file": "public/chat-input.json",
+    "document": "public",
+    "schema": "ChatInput"
+  },
+  {
+    "file": "public/chat-accepted.json",
+    "document": "public",
+    "schema": "ChatAccepted"
+  },
+  {
+    "file": "public/error.json",
+    "document": "public",
+    "schema": "ErrorEnvelope"
+  },
+  {
+    "file": "public/request-status.json",
+    "document": "public",
+    "schema": "RequestStatus"
+  },
+  {
+    "file": "public/cancel-result.json",
+    "document": "public",
+    "schema": "CancelResult"
+  },
+  {
+    "file": "public/turn.json",
+    "document": "public",
+    "schema": "Turn"
+  },
+  {
+    "file": "public/request.accepted.json",
+    "document": "public",
+    "schema": "EventAccepted"
+  },
+  {
+    "file": "public/retrieval.degraded.json",
+    "document": "public",
+    "schema": "EventDegraded"
+  },
+  {
+    "file": "public/assistant.started.json",
+    "document": "public",
+    "schema": "EventStarted"
+  },
+  {
+    "file": "public/assistant.delta.json",
+    "document": "public",
+    "schema": "EventDelta"
+  },
+  {
+    "file": "public/assistant.completed.json",
+    "document": "public",
+    "schema": "EventCompleted"
+  },
+  {
+    "file": "public/request.failed.json",
+    "document": "public",
+    "schema": "EventFailed"
+  },
+  {
+    "file": "public/request.cancelled.json",
+    "document": "public",
+    "schema": "EventCancelled"
+  },
+  {
+    "file": "internal/stream-input.json",
+    "document": "internal",
+    "schema": "StreamInput"
+  },
+  {
+    "file": "internal/generate-input.json",
+    "document": "internal",
+    "schema": "GenerateInput"
+  },
+  {
+    "file": "internal/embedding-input.json",
+    "document": "internal",
+    "schema": "EmbeddingInput"
+  },
+  {
+    "file": "internal/verify-input.json",
+    "document": "internal",
+    "schema": "VerifyInput"
+  },
+  {
+    "file": "internal/generate-result.json",
+    "document": "internal",
+    "schema": "GenerateResult"
+  },
+  {
+    "file": "internal/embedding-result.json",
+    "document": "internal",
+    "schema": "EmbeddingResult"
+  },
+  {
+    "file": "internal/verify-result.json",
+    "document": "internal",
+    "schema": "VerifyResult"
+  },
+  {
+    "file": "internal/provider.dispatched.json",
+    "document": "internal",
+    "schema": "ProviderDispatched"
+  },
+  {
+    "file": "internal/assistant.delta.json",
+    "document": "internal",
+    "schema": "AssistantDelta"
+  },
+  {
+    "file": "internal/provider.completed.json",
+    "document": "internal",
+    "schema": "ProviderCompleted"
+  },
+  {
+    "file": "internal/provider.failed.json",
+    "document": "internal",
+    "schema": "ProviderFailure"
+  },
+  {
+    "file": "internal/error.json",
+    "document": "internal",
+    "schema": "InternalError"
+  }
+]

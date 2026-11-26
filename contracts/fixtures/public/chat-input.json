@@ -1,0 +1,44 @@
+{
+  "projectId": "11111111-1111-1111-1111-111111111111",
+  "conversationId": "22222222-2222-2222-2222-222222222222",
+  "mainStageId": "33333333-3333-3333-3333-333333333333",
+  "subBranchId": null,
+  "userContentBlocks": [
+    {
+      "type": "TEXT",
+      "text": "Đối chiếu giúp mình đoạn trích "
+    },
+    {
+      "type": "QUOTE_REF",
+      "quoteRefId": "q1"
+    },
+    {
+      "type": "TEXT",
+      "text": " với quyết định hiện hành."
+    }
+  ],
+  "quotes": [
+    {
+      "quoteRefId": "q1",
+      "sourceKind": "SUB_BRANCH_TURN",
+      "sourceId": "44444444-4444-4444-4444-444444444444",
+      "sourceRevision": "1",
+      "locator": {
+        "charStart": 0,
+        "charEnd": 22,
+        "prefixAnchor": "",
+        "suffixAnchor": ""
+      },
+      "contentHashSha256Hex": "309d49bee8e3e45e00cc985568943300c187a590951b00f6f2d9cabf73b5135c",
+      "snapshotText": "Dùng PostgreSQL chung."
+    }
+  ],
+  "mainReferences": [
+    {
+      "granularity": "CHAPTER",
+      "targetStageId": "33333333-3333-3333-3333-333333333333",
+      "targetChapterId": "55555555-5555-5555-5555-555555555555",
+      "targetTurnId": null
+    }
+  ]
+}

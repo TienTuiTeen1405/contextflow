@@ -1,0 +1,7 @@
+{
+  "requestId": "77777777-7777-7777-7777-777777777777",
+  "errorCode": "PROVIDER_RATE_LIMITED",
+  "message": "Tạm thời quá giới hạn.",
+  "retryable": true,
+  "retryAfterSeconds": 12
+}

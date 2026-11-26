@@ -1,0 +1,535 @@
+{
+  "schemaVersion": 1,
+  "status": "roles-defined-members-unassigned",
+  "note": "Entity/Repository names reserve ownership; classes are implemented by the owning group, not pre-created here.",
+  "roles": {
+    "integration-maintainer": {
+      "description": "Người duyệt tích hợp, cấu hình chung và CI",
+      "github": []
+    },
+    "core-identity": {
+      "description": "Nhóm Core Identity/Credential",
+      "github": []
+    },
+    "core-platform": {
+      "description": "Nhóm Core Admin, shared API và idempotency",
+      "github": []
+    },
+    "core-workspace": {
+      "description": "Nhóm Core Workspace/Conversation/Lifecycle/Export",
+      "github": []
+    },
+    "core-ai": {
+      "description": "Nhóm Core Chat Worker/Continuity/Usage/AI Jobs",
+      "github": []
+    },
+    "core-knowledge": {
+      "description": "Nhóm Core KB/Retrieval/SoT",
+      "github": []
+    },
+    "web-lead": {
+      "description": "Người duyệt Web",
+      "github": []
+    },
+    "ai-lead": {
+      "description": "Người duyệt AI Service/Provider Adapter",
+      "github": []
+    },
+    "data-maintainer": {
+      "description": "Người duyệt SQL, migration và bất biến dữ liệu",
+      "github": []
+    }
+  },
+  "pathRules": [
+    {
+      "pattern": "*",
+      "requiredReviewRoles": ["integration-maintainer"]
+    },
+    {
+      "pattern": "/web/",
+      "requiredReviewRoles": ["web-lead"]
+    },
+    {
+      "pattern": "/ai-service/",
+      "requiredReviewRoles": ["ai-lead"]
+    },
+    {
+      "pattern": "/core-backend/",
+      "requiredReviewRoles": ["core-platform"]
+    },
+    {
+      "pattern": "/core-backend/src/main/java/com/contextflow/identity/",
+      "requiredReviewRoles": ["core-identity"]
+    },
+    {
+      "pattern": "/core-backend/src/main/java/com/contextflow/credential/",
+      "requiredReviewRoles": ["core-identity"]
+    },
+    {
+      "pattern": "/core-backend/src/main/java/com/contextflow/admin/",
+      "requiredReviewRoles": ["core-platform"]
+    },
+    {
+      "pattern": "/core-backend/src/main/java/com/contextflow/project/",
+      "requiredReviewRoles": ["core-workspace"]
+    },
+    {
+      "pattern": "/core-backend/src/main/java/com/contextflow/conversation/",
+      "requiredReviewRoles": ["core-workspace"]
+    },
+    {
+      "pattern": "/core-backend/src/main/java/com/contextflow/ai/",
+      "requiredReviewRoles": ["core-ai"]
+    },
+    {
+      "pattern": "/core-backend/src/main/java/com/contextflow/knowledge/",
+      "requiredReviewRoles": ["core-knowledge"]
+    },
+    {
+      "pattern": "/core-backend/src/main/java/com/contextflow/sot/",
+      "requiredReviewRoles": ["core-knowledge"]
+    },
+    {
+      "pattern": "/core-backend/src/main/java/com/contextflow/context/",
+      "requiredReviewRoles": ["core-workspace"]
+    },
+    {
+      "pattern": "/core-backend/src/main/java/com/contextflow/export/",
+      "requiredReviewRoles": ["core-workspace"]
+    },
+    {
+      "pattern": "/core-backend/src/main/java/com/contextflow/common/idempotency/",
+      "requiredReviewRoles": ["core-platform"]
+    },
+    {
+      "pattern": "/core-backend/src/main/java/com/contextflow/common/",
+      "requiredReviewRoles": ["integration-maintainer", "core-platform"]
+    },
+    {
+      "pattern": "/core-backend/src/main/java/com/contextflow/contracts/",
+      "requiredReviewRoles": ["integration-maintainer", "core-platform"]
+    },
+    {
+      "pattern": "/contracts/",
+      "requiredReviewRoles": [
+        "integration-maintainer",
+        "core-platform",
+        "web-lead",
+        "ai-lead"
+      ]
+    },
+    {
+      "pattern": "/contracts/public.openapi.json",
+      "requiredReviewRoles": ["core-platform", "web-lead"]
+    },
+    {
+      "pattern": "/contracts/internal.openapi.json",
+      "requiredReviewRoles": ["core-ai", "ai-lead"]
+    },
+    {
+      "pattern": "/core-backend/src/main/resources/db/migration/",
+      "requiredReviewRoles": ["data-maintainer", "core-platform"]
+    },
+    {
+      "pattern": "/infra/",
+      "requiredReviewRoles": ["integration-maintainer", "data-maintainer"]
+    },
+    {
+      "pattern": "/.github/",
+      "requiredReviewRoles": ["integration-maintainer"]
+    },
+    {
+      "pattern": "/scripts/",
+      "requiredReviewRoles": ["integration-maintainer"]
+    }
+  ],
+  "tables": [
+    {
+      "table": "users",
+      "domain": "identity",
+      "javaPackage": "com.contextflow.identity",
+      "entity": "User",
+      "repository": "UserRepository",
+      "ownerRole": "core-identity",
+      "requiredReviewRoles": ["core-identity", "data-maintainer"]
+    },
+    {
+      "table": "user_oauth_accounts",
+      "domain": "identity",
+      "javaPackage": "com.contextflow.identity",
+      "entity": "UserOAuthAccount",
+      "repository": "UserOAuthAccountRepository",
+      "ownerRole": "core-identity",
+      "requiredReviewRoles": ["core-identity", "data-maintainer"]
+    },
+    {
+      "table": "auth_sessions",
+      "domain": "identity",
+      "javaPackage": "com.contextflow.identity",
+      "entity": "AuthSession",
+      "repository": "AuthSessionRepository",
+      "ownerRole": "core-identity",
+      "requiredReviewRoles": ["core-identity", "data-maintainer"]
+    },
+    {
+      "table": "personal_skills",
+      "domain": "identity",
+      "javaPackage": "com.contextflow.identity",
+      "entity": "PersonalSkill",
+      "repository": "PersonalSkillRepository",
+      "ownerRole": "core-identity",
+      "requiredReviewRoles": ["core-identity", "data-maintainer"]
+    },
+    {
+      "table": "ai_credentials",
+      "domain": "credential",
+      "javaPackage": "com.contextflow.credential",
+      "entity": "AiCredential",
+      "repository": "AiCredentialRepository",
+      "ownerRole": "core-identity",
+      "requiredReviewRoles": ["core-identity", "data-maintainer"]
+    },
+    {
+      "table": "privacy_disclosure_acknowledgements",
+      "domain": "credential",
+      "javaPackage": "com.contextflow.credential",
+      "entity": "PrivacyDisclosureAcknowledgement",
+      "repository": "PrivacyDisclosureAcknowledgementRepository",
+      "ownerRole": "core-identity",
+      "requiredReviewRoles": ["core-identity", "data-maintainer"]
+    },
+    {
+      "table": "task_model_registry",
+      "domain": "admin",
+      "javaPackage": "com.contextflow.admin",
+      "entity": "TaskModelRegistry",
+      "repository": "TaskModelRegistryRepository",
+      "ownerRole": "core-platform",
+      "requiredReviewRoles": ["core-platform", "data-maintainer"]
+    },
+    {
+      "table": "platform_settings",
+      "domain": "admin",
+      "javaPackage": "com.contextflow.admin",
+      "entity": "PlatformSetting",
+      "repository": "PlatformSettingRepository",
+      "ownerRole": "core-platform",
+      "requiredReviewRoles": ["core-platform", "data-maintainer"]
+    },
+    {
+      "table": "intelligence_templates",
+      "domain": "admin",
+      "javaPackage": "com.contextflow.admin",
+      "entity": "IntelligenceTemplate",
+      "repository": "IntelligenceTemplateRepository",
+      "ownerRole": "core-platform",
+      "requiredReviewRoles": ["core-platform", "data-maintainer"]
+    },
+    {
+      "table": "prompt_templates",
+      "domain": "admin",
+      "javaPackage": "com.contextflow.admin",
+      "entity": "PromptTemplate",
+      "repository": "PromptTemplateRepository",
+      "ownerRole": "core-platform",
+      "requiredReviewRoles": ["core-platform", "data-maintainer"]
+    },
+    {
+      "table": "usage_quota_limits",
+      "domain": "admin",
+      "javaPackage": "com.contextflow.admin",
+      "entity": "UsageQuotaLimit",
+      "repository": "UsageQuotaLimitRepository",
+      "ownerRole": "core-platform",
+      "requiredReviewRoles": ["core-platform", "data-maintainer"]
+    },
+    {
+      "table": "projects",
+      "domain": "project",
+      "javaPackage": "com.contextflow.project",
+      "entity": "Project",
+      "repository": "ProjectRepository",
+      "ownerRole": "core-workspace",
+      "requiredReviewRoles": ["core-workspace", "data-maintainer"]
+    },
+    {
+      "table": "project_rules",
+      "domain": "project",
+      "javaPackage": "com.contextflow.project",
+      "entity": "ProjectRule",
+      "repository": "ProjectRuleRepository",
+      "ownerRole": "core-workspace",
+      "requiredReviewRoles": ["core-workspace", "data-maintainer"]
+    },
+    {
+      "table": "project_skills",
+      "domain": "project",
+      "javaPackage": "com.contextflow.project",
+      "entity": "ProjectSkill",
+      "repository": "ProjectSkillRepository",
+      "ownerRole": "core-workspace",
+      "requiredReviewRoles": ["core-workspace", "data-maintainer"]
+    },
+    {
+      "table": "deletion_sessions",
+      "domain": "project",
+      "javaPackage": "com.contextflow.project",
+      "entity": "DeletionSession",
+      "repository": "DeletionSessionRepository",
+      "ownerRole": "core-workspace",
+      "requiredReviewRoles": ["core-workspace", "data-maintainer"]
+    },
+    {
+      "table": "deletion_stage_items",
+      "domain": "project",
+      "javaPackage": "com.contextflow.project",
+      "entity": "DeletionStageItem",
+      "repository": "DeletionStageItemRepository",
+      "ownerRole": "core-workspace",
+      "requiredReviewRoles": ["core-workspace", "data-maintainer"]
+    },
+    {
+      "table": "conversations",
+      "domain": "conversation",
+      "javaPackage": "com.contextflow.conversation",
+      "entity": "Conversation",
+      "repository": "ConversationRepository",
+      "ownerRole": "core-workspace",
+      "requiredReviewRoles": ["core-workspace", "data-maintainer"]
+    },
+    {
+      "table": "main_stages",
+      "domain": "conversation",
+      "javaPackage": "com.contextflow.conversation",
+      "entity": "MainStage",
+      "repository": "MainStageRepository",
+      "ownerRole": "core-workspace",
+      "requiredReviewRoles": ["core-workspace", "data-maintainer"]
+    },
+    {
+      "table": "chapters",
+      "domain": "conversation",
+      "javaPackage": "com.contextflow.conversation",
+      "entity": "Chapter",
+      "repository": "ChapterRepository",
+      "ownerRole": "core-workspace",
+      "requiredReviewRoles": ["core-workspace", "data-maintainer"]
+    },
+    {
+      "table": "chapter_summaries",
+      "domain": "conversation",
+      "javaPackage": "com.contextflow.conversation",
+      "entity": "ChapterSummary",
+      "repository": "ChapterSummaryRepository",
+      "ownerRole": "core-workspace",
+      "requiredReviewRoles": ["core-workspace", "data-maintainer"]
+    },
+    {
+      "table": "sub_branches",
+      "domain": "conversation",
+      "javaPackage": "com.contextflow.conversation",
+      "entity": "SubBranch",
+      "repository": "SubBranchRepository",
+      "ownerRole": "core-workspace",
+      "requiredReviewRoles": ["core-workspace", "data-maintainer"]
+    },
+    {
+      "table": "turns",
+      "domain": "conversation",
+      "javaPackage": "com.contextflow.conversation",
+      "entity": "Turn",
+      "repository": "TurnRepository",
+      "ownerRole": "core-workspace",
+      "requiredReviewRoles": ["core-workspace", "data-maintainer"]
+    },
+    {
+      "table": "turn_main_references",
+      "domain": "conversation",
+      "javaPackage": "com.contextflow.conversation",
+      "entity": "TurnMainReference",
+      "repository": "TurnMainReferenceRepository",
+      "ownerRole": "core-workspace",
+      "requiredReviewRoles": ["core-workspace", "data-maintainer"]
+    },
+    {
+      "table": "turn_quote_references",
+      "domain": "conversation",
+      "javaPackage": "com.contextflow.conversation",
+      "entity": "TurnQuoteReference",
+      "repository": "TurnQuoteReferenceRepository",
+      "ownerRole": "core-workspace",
+      "requiredReviewRoles": ["core-workspace", "data-maintainer"]
+    },
+    {
+      "table": "continuity_epochs",
+      "domain": "ai",
+      "javaPackage": "com.contextflow.ai",
+      "entity": "ContinuityEpoch",
+      "repository": "ContinuityEpochRepository",
+      "ownerRole": "core-ai",
+      "requiredReviewRoles": ["core-ai", "data-maintainer"]
+    },
+    {
+      "table": "continuity_turn_entries",
+      "domain": "ai",
+      "javaPackage": "com.contextflow.ai",
+      "entity": "ContinuityTurnEntry",
+      "repository": "ContinuityTurnEntryRepository",
+      "ownerRole": "core-ai",
+      "requiredReviewRoles": ["core-ai", "data-maintainer"]
+    },
+    {
+      "table": "ai_requests",
+      "domain": "ai",
+      "javaPackage": "com.contextflow.ai",
+      "entity": "AiRequest",
+      "repository": "AiRequestRepository",
+      "ownerRole": "core-ai",
+      "requiredReviewRoles": ["core-ai", "data-maintainer"]
+    },
+    {
+      "table": "ai_request_events",
+      "domain": "ai",
+      "javaPackage": "com.contextflow.ai",
+      "entity": "AiRequestEvent",
+      "repository": "AiRequestEventRepository",
+      "ownerRole": "core-ai",
+      "requiredReviewRoles": ["core-ai", "data-maintainer"]
+    },
+    {
+      "table": "ai_usage_records",
+      "domain": "ai",
+      "javaPackage": "com.contextflow.ai",
+      "entity": "AiUsageRecord",
+      "repository": "AiUsageRecordRepository",
+      "ownerRole": "core-ai",
+      "requiredReviewRoles": ["core-ai", "data-maintainer"]
+    },
+    {
+      "table": "ai_execution_audits",
+      "domain": "ai",
+      "javaPackage": "com.contextflow.ai",
+      "entity": "AiExecutionAudit",
+      "repository": "AiExecutionAuditRepository",
+      "ownerRole": "core-ai",
+      "requiredReviewRoles": ["core-ai", "data-maintainer"]
+    },
+    {
+      "table": "ai_jobs",
+      "domain": "ai",
+      "javaPackage": "com.contextflow.ai",
+      "entity": "AiJob",
+      "repository": "AiJobRepository",
+      "ownerRole": "core-ai",
+      "requiredReviewRoles": ["core-ai", "data-maintainer"]
+    },
+    {
+      "table": "ai_job_provider_steps",
+      "domain": "ai",
+      "javaPackage": "com.contextflow.ai",
+      "entity": "AiJobProviderStep",
+      "repository": "AiJobProviderStepRepository",
+      "ownerRole": "core-ai",
+      "requiredReviewRoles": ["core-ai", "data-maintainer"]
+    },
+    {
+      "table": "user_usage_counters",
+      "domain": "ai",
+      "javaPackage": "com.contextflow.ai",
+      "entity": "UserUsageCounter",
+      "repository": "UserUsageCounterRepository",
+      "ownerRole": "core-ai",
+      "requiredReviewRoles": ["core-ai", "data-maintainer"]
+    },
+    {
+      "table": "tombstones",
+      "domain": "knowledge",
+      "javaPackage": "com.contextflow.knowledge",
+      "entity": "Tombstone",
+      "repository": "TombstoneRepository",
+      "ownerRole": "core-knowledge",
+      "requiredReviewRoles": ["core-knowledge", "data-maintainer"]
+    },
+    {
+      "table": "index_generations",
+      "domain": "knowledge",
+      "javaPackage": "com.contextflow.knowledge",
+      "entity": "IndexGeneration",
+      "repository": "IndexGenerationRepository",
+      "ownerRole": "core-knowledge",
+      "requiredReviewRoles": ["core-knowledge", "data-maintainer"]
+    },
+    {
+      "table": "knowledge_items",
+      "domain": "knowledge",
+      "javaPackage": "com.contextflow.knowledge",
+      "entity": "KnowledgeItem",
+      "repository": "KnowledgeItemRepository",
+      "ownerRole": "core-knowledge",
+      "requiredReviewRoles": ["core-knowledge", "data-maintainer"]
+    },
+    {
+      "table": "knowledge_chunks",
+      "domain": "knowledge",
+      "javaPackage": "com.contextflow.knowledge",
+      "entity": "KnowledgeChunk",
+      "repository": "KnowledgeChunkRepository",
+      "ownerRole": "core-knowledge",
+      "requiredReviewRoles": ["core-knowledge", "data-maintainer"]
+    },
+    {
+      "table": "embedding_outbox",
+      "domain": "knowledge",
+      "javaPackage": "com.contextflow.knowledge",
+      "entity": "EmbeddingOutbox",
+      "repository": "EmbeddingOutboxRepository",
+      "ownerRole": "core-knowledge",
+      "requiredReviewRoles": ["core-knowledge", "data-maintainer"]
+    },
+    {
+      "table": "sot_decisions",
+      "domain": "sot",
+      "javaPackage": "com.contextflow.sot",
+      "entity": "SotDecision",
+      "repository": "SotDecisionRepository",
+      "ownerRole": "core-knowledge",
+      "requiredReviewRoles": ["core-knowledge", "data-maintainer"]
+    },
+    {
+      "table": "sot_decision_evidences",
+      "domain": "sot",
+      "javaPackage": "com.contextflow.sot",
+      "entity": "SotDecisionEvidence",
+      "repository": "SotDecisionEvidenceRepository",
+      "ownerRole": "core-knowledge",
+      "requiredReviewRoles": ["core-knowledge", "data-maintainer"]
+    },
+    {
+      "table": "context_box_items",
+      "domain": "context",
+      "javaPackage": "com.contextflow.context",
+      "entity": "ContextBoxItem",
+      "repository": "ContextBoxItemRepository",
+      "ownerRole": "core-workspace",
+      "requiredReviewRoles": ["core-workspace", "data-maintainer"]
+    },
+    {
+      "table": "export_jobs",
+      "domain": "export",
+      "javaPackage": "com.contextflow.export",
+      "entity": "ExportJob",
+      "repository": "ExportJobRepository",
+      "ownerRole": "core-workspace",
+      "requiredReviewRoles": ["core-workspace", "data-maintainer"]
+    },
+    {
+      "table": "operation_receipts",
+      "domain": "common.idempotency",
+      "javaPackage": "com.contextflow.common.idempotency",
+      "entity": "OperationReceipt",
+      "repository": "OperationReceiptRepository",
+      "ownerRole": "core-platform",
+      "requiredReviewRoles": ["core-platform", "data-maintainer"]
+    }
+  ]
+}

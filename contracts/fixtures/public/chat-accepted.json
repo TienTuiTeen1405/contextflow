@@ -1,0 +1,10 @@
+{
+  "requestId": "77777777-7777-7777-7777-777777777777",
+  "correlationId": "64254ba2-ba13-4a15-af4b-8e262140d080",
+  "status": "ACCEPTED",
+  "effectivePrivacyTierPlanned": "FREE",
+  "eventsUrl": "/api/v1/ai/requests/77777777-7777-7777-7777-777777777777/events",
+  "statusUrl": "/api/v1/ai/requests/77777777-7777-7777-7777-777777777777",
+  "cancelUrl": "/api/v1/ai/requests/77777777-7777-7777-7777-777777777777/cancel",
+  "createdAt": "2026-11-25T01:30:00Z"
+}

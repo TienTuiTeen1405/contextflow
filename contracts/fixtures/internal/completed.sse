@@ -1,0 +1,8 @@
+event: provider.dispatched
+data: {"correlation_id":"64254ba2-ba13-4a15-af4b-8e262140d080","provider_call_id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","occurred_at":"2026-11-26T00:00:00Z","provider_request_id":null}
+
+event: assistant.delta
+data: {"correlation_id":"64254ba2-ba13-4a15-af4b-8e262140d080","provider_call_id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","text":"Phản hồi nội bộ."}
+
+event: provider.completed
+data: {"correlation_id":"64254ba2-ba13-4a15-af4b-8e262140d080","provider_call_id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","assistant_text":"Phản hồi nội bộ.","native_output_steps":[{"type":"text","text":"Synthetic continuation.","extension":{"z":1,"a":2},"thought_signature":"fixture-only-signature"}],"finish_reason":"STOP","service_tier":null,"completed_at":"2026-11-26T00:00:00Z","usage_status":"UNAVAILABLE","usage":{"input_tokens":null,"output_tokens":null,"total_tokens":null,"cached_tokens":null,"reasoning_tokens":null}}

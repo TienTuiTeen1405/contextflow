@@ -1,0 +1,12 @@
+{
+  "requestId": "77777777-7777-7777-7777-777777777777",
+  "overallStatus": "PARTIAL",
+  "components": [
+    {
+      "component": "VECTOR_SEARCH",
+      "status": "UNAVAILABLE",
+      "reasonCode": "PLATFORM_CREDENTIAL_UNAVAILABLE"
+    }
+  ],
+  "userMessage": "Tìm kiếm vector tạm thời không khả dụng."
+}

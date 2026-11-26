@@ -1,0 +1,24 @@
+{
+  "error": {
+    "code": "EXPLICIT_REFERENCE_BUDGET_EXCEEDED",
+    "message": "Tổng nội dung @Main và Quote vượt trần ngân sách tham chiếu tường minh.",
+    "retryable": false,
+    "correlationId": "64254ba2-ba13-4a15-af4b-8e262140d080",
+    "details": {
+      "estimatedTokens": 11420,
+      "maxAllowedTokens": 9600,
+      "referenceBreakdown": [
+        {
+          "kind": "MAIN_REF",
+          "id": "ref-1",
+          "estimatedTokens": 8900
+        },
+        {
+          "kind": "QUOTE",
+          "id": "q1",
+          "estimatedTokens": 2520
+        }
+      ]
+    }
+  }
+}

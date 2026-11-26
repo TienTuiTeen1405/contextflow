@@ -1,0 +1,13 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="ContextFlow Core (IDE)" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+    <module name="core-backend" />
+    <option name="SPRING_BOOT_MAIN_CLASS" value="com.contextflow.ContextFlowApplication" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/core-backend" />
+    <option name="envFilePaths">
+      <option value="$PROJECT_DIR$/core-backend/.env" />
+    </option>
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

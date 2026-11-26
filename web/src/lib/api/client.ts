@@ -1,15 +1,12 @@
-export interface ApiErrorBody {
-  code: string;
-  message: string;
-  retryable: boolean;
-  correlationId: string;
-  details?: Record<string, unknown>;
-}
+import type { components } from "./generated/public";
+
+export type ApiErrorBody = components["schemas"]["ApiError"];
+type TransportError = Omit<ApiErrorBody, "code"> & { code: "HTTP_ERROR" };
 
 export class ApiError extends Error {
   constructor(
     public readonly status: number,
-    public readonly body: ApiErrorBody,
+    public readonly body: ApiErrorBody | TransportError,
   ) {
     super(body.message);
     this.name = "ApiError";

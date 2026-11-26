@@ -11,5 +11,6 @@ mvnw.cmd
 *.py
 .tools
 .scratch
+agent
 core-backend/mvnw
 core-backend/mvnw.cmd

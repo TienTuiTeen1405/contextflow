@@ -11,17 +11,28 @@
     "npm": ">=11 <12"
   },
   "scripts": {
+    "setup:local": "node scripts/setup-local.mjs",
+    "dev:core": "node scripts/dev-core.mjs",
+    "local:check": "node scripts/check-local.mjs",
+    "contracts:generate": "node scripts/contracts.mjs",
+    "contracts:check": "node scripts/contracts.mjs --check",
+    "contracts:check:web": "node scripts/generate-contracts.mjs --check",
+    "owners:check": "node scripts/ownership.mjs",
+    "owners:generate": "node scripts/ownership.mjs --generate",
+    "test:tooling": "node --test scripts/tests/*.test.mjs",
     "dev:web": "npm run dev --workspace @contextflow/web",
     "build:web": "npm run build --workspace @contextflow/web",
     "check:web": "npm run check --workspace @contextflow/web",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "infra:up": "docker compose --env-file infra/.env -f infra/compose.yaml up -d postgres",
+    "infra:up:ide": "docker compose --env-file infra/.env -f infra/compose.yaml -f infra/compose.ide.yaml up -d --build --wait --wait-timeout 180 postgres ai-service",
     "infra:down": "docker compose --env-file infra/.env -f infra/compose.yaml down",
-    "stack:up": "docker compose --env-file infra/.env -f infra/compose.yaml up --build -d",
+    "stack:up": "docker compose --env-file infra/.env -f infra/compose.yaml up --build -d --wait --wait-timeout 180",
     "stack:down": "docker compose --env-file infra/.env -f infra/compose.yaml down"
   },
   "devDependencies": {
+    "openapi-typescript": "7.13.0",
     "prettier": "3.6.2"
   },
   "overrides": {

@@ -1,7 +1,9 @@
 package com.contextflow.common.config;
 
-import com.contextflow.common.api.ApiError;
 import com.contextflow.common.api.CorrelationIdFilter;
+import com.contextflow.contracts.generated.PublicApi.ApiError;
+import com.contextflow.contracts.generated.PublicApi.ErrorCode;
+import com.contextflow.contracts.generated.PublicApi.ErrorEnvelope;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -41,7 +43,7 @@ public class SecurityConfiguration {
                                                 request,
                                                 response,
                                                 401,
-                                                "UNAUTHENTICATED",
+                                                ErrorCode.UNAUTHENTICATED,
                                                 "Authentication is required."))
                                 .accessDeniedHandler((request, response, exception) ->
                                         writeError(
@@ -49,7 +51,7 @@ public class SecurityConfiguration {
                                                 request,
                                                 response,
                                                 403,
-                                                "FORBIDDEN",
+                                                ErrorCode.FORBIDDEN,
                                                 "Access is not allowed.")))
                 .build();
     }
@@ -73,18 +75,22 @@ public class SecurityConfiguration {
             HttpServletRequest request,
             HttpServletResponse response,
             int status,
-            String code,
+            ErrorCode code,
             String message)
             throws IOException {
         response.setStatus(status);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         mapper.writeValue(
                 response.getOutputStream(),
-                new ApiError.Envelope(
+                new ErrorEnvelope(
                         new ApiError(
                                 code,
                                 message,
-                                false,
-                                (String) request.getAttribute(CorrelationIdFilter.ATTRIBUTE))));
+                                code.retryable(),
+                                java.util.UUID.fromString(
+                                        (String)
+                                                request.getAttribute(
+                                                        CorrelationIdFilter.ATTRIBUTE)),
+                                null)));
     }
 }

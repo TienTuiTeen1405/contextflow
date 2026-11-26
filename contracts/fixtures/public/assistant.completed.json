@@ -1,0 +1,17 @@
+{
+  "requestId": "77777777-7777-7777-7777-777777777777",
+  "turnId": "88888888-8888-4888-8888-888888888888",
+  "sequenceNo": 1,
+  "sourceRevision": 1,
+  "finishReason": "STOP",
+  "modelUsed": "mock",
+  "effectivePrivacyTier": "FREE",
+  "usageStatus": "PARTIAL",
+  "usage": {
+    "totalInputTokens": 34,
+    "totalOutputTokens": 12,
+    "totalThoughtTokens": null,
+    "totalCachedTokens": null,
+    "totalTokens": 46
+  }
+}

@@ -11,7 +11,7 @@
 | AI Adapter            | `ai-service/app/providers`, `schemas`, `prompt_builder`  | DTO 04-6, Mock thực thi 4 task endpoints, Builder A–E, cancellation/error fixtures | Hợp đồng thống nhất với Core; không cần SDK thật                |
 | Provider PoC          | `poc`                                                    | Bằng chứng CF-DEC-038 đã redaction, kết luận SDK/API                               | Khóa thử nghiệm do chủ sở hữu cung cấp; chưa nằm trong scaffold |
 
-`ProviderAdapter` hiện chỉ có `status()`. Nhóm AI bổ sung execution methods theo DTO 04-6; không dùng endpoint bootstrap `/status` làm API Chat. Core chưa gọi AI hoặc giải mã Credential. File `.env.example` liệt kê biến dự kiến, không xác nhận tính năng đã có.
+`ProviderAdapter` đã có 4 task methods và FastAPI có endpoint Mock theo 04-6; xem [hợp đồng/fixture](../contracts/README.md). Core chưa triển khai business Chat hay giải mã Credential. Các nhóm dùng chung DTO sinh từ OpenAPI; không tự tạo biến thể payload. Xem [sở hữu domain/bảng và review](ownership.md) trước khi tạo Entity/Repository.
 
 ## Thứ tự tích hợp
 

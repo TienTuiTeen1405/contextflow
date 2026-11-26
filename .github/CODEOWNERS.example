@@ -1,0 +1,27 @@
+# Generate the real CODEOWNERS after assigning GitHub identities in ownership.json.
+# npm run owners:generate
+# GitHub accepts usernames or organization/team handles, not the role IDs below.
+# * integration-maintainer
+# /web/ web-lead
+# /ai-service/ ai-lead
+# /core-backend/ core-platform
+# /core-backend/src/main/java/com/contextflow/identity/ core-identity
+# /core-backend/src/main/java/com/contextflow/credential/ core-identity
+# /core-backend/src/main/java/com/contextflow/admin/ core-platform
+# /core-backend/src/main/java/com/contextflow/project/ core-workspace
+# /core-backend/src/main/java/com/contextflow/conversation/ core-workspace
+# /core-backend/src/main/java/com/contextflow/ai/ core-ai
+# /core-backend/src/main/java/com/contextflow/knowledge/ core-knowledge
+# /core-backend/src/main/java/com/contextflow/sot/ core-knowledge
+# /core-backend/src/main/java/com/contextflow/context/ core-workspace
+# /core-backend/src/main/java/com/contextflow/export/ core-workspace
+# /core-backend/src/main/java/com/contextflow/common/idempotency/ core-platform
+# /core-backend/src/main/java/com/contextflow/contracts/ integration-maintainer + core-platform
+# /core-backend/src/main/java/com/contextflow/common/ integration-maintainer + core-platform
+# /contracts/ integration-maintainer + core-platform + web-lead + ai-lead
+# /contracts/public.openapi.json core-platform + web-lead
+# /contracts/internal.openapi.json core-ai + ai-lead
+# /core-backend/src/main/resources/db/migration/ data-maintainer + core-platform
+# /infra/ integration-maintainer + data-maintainer
+# /.github/ integration-maintainer
+# /scripts/ integration-maintainer

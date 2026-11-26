@@ -1,0 +1,1618 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "ContextFlow public contracts — BranOS-04-1 / 04-2",
+    "version": "0.1.0",
+    "description": "Contract foundation for four Chat/SSE endpoints and shared API errors/pagination. Auth/workspace/admin DTO details remain in BranOS-04-3/04-4/04-5."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080",
+      "description": "Default Docker Core"
+    },
+    {
+      "url": "http://localhost:18080",
+      "description": "Explicit IDE development mode"
+    }
+  ],
+  "paths": {
+    "/api/v1/ai/chat-requests": {
+      "post": {
+        "operationId": "createChatRequest",
+        "summary": "Accept a chat request without provider dispatch in the HTTP transaction",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Committed acceptance or idempotent replay",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatAccepted"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Normalized API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Normalized API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Normalized API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Normalized API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Normalized API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Normalized API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Normalized API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Normalized API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Normalized API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-implementation-status": "contract-only; Core business implementation belongs to M1"
+      }
+    },
+    "/api/v1/ai/requests/{requestId}/events": {
+      "get": {
+        "operationId": "readChatEvents",
+        "parameters": [
+          {
+            "name": "requestId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Last-Event-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]+$"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]+$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Read committed backlog then live events; header cursor wins; GET never dispatches provider work",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                },
+                "x-events": {
+                  "request.accepted": {
+                    "$ref": "#/components/schemas/EventAccepted"
+                  },
+                  "retrieval.degraded": {
+                    "$ref": "#/components/schemas/EventDegraded"
+                  },
+                  "assistant.started": {
+                    "$ref": "#/components/schemas/EventStarted"
+                  },
+                  "assistant.delta": {
+                    "$ref": "#/components/schemas/EventDelta"
+                  },
+                  "assistant.completed": {
+                    "$ref": "#/components/schemas/EventCompleted"
+                  },
+                  "request.failed": {
+                    "$ref": "#/components/schemas/EventFailed"
+                  },
+                  "request.cancelled": {
+                    "$ref": "#/components/schemas/EventCancelled"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Normalized API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Normalized API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Normalized API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Normalized API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Normalized API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Normalized API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Normalized API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Normalized API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Normalized API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-implementation-status": "contract-only; Core business implementation belongs to M1"
+      }
+    },
+    "/api/v1/ai/requests/{requestId}": {
+      "get": {
+        "operationId": "getChatRequestStatus",
+        "parameters": [
+          {
+            "name": "requestId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current committed request status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestStatus"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Normalized API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Normalized API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Normalized API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Normalized API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Normalized API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Normalized API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Normalized API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Normalized API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Normalized API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-implementation-status": "contract-only; Core business implementation belongs to M1"
+      }
+    },
+    "/api/v1/ai/requests/{requestId}/cancel": {
+      "post": {
+        "operationId": "cancelChatRequest",
+        "parameters": [
+          {
+            "name": "requestId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Idempotent application cancellation or existing terminal status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CancelResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Normalized API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Normalized API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Normalized API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Normalized API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Normalized API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Normalized API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Normalized API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Normalized API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Normalized API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-implementation-status": "contract-only; Core business implementation belongs to M1"
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "RequestState": {
+        "type": "string",
+        "enum": ["ACCEPTED", "IN_PROGRESS", "COMPLETED", "FAILED", "CANCELLED"]
+      },
+      "TerminalState": {
+        "type": "string",
+        "enum": ["COMPLETED", "FAILED", "CANCELLED"]
+      },
+      "PrivacyTier": {
+        "type": "string",
+        "enum": ["FREE", "PAID", "UNKNOWN"]
+      },
+      "UsageStatus": {
+        "type": "string",
+        "enum": ["AVAILABLE", "PARTIAL", "UNAVAILABLE"]
+      },
+      "LinkStatus": {
+        "type": "string",
+        "enum": ["AVAILABLE", "UNAVAILABLE"]
+      },
+      "QuoteSourceKind": {
+        "type": "string",
+        "enum": [
+          "MAIN_TURN",
+          "SUB_BRANCH_TURN",
+          "KB_ITEM",
+          "SOT_RECORD",
+          "CHAPTER_SUMMARY"
+        ]
+      },
+      "CancelReason": {
+        "type": "string",
+        "enum": [
+          "USER_CANCELLED",
+          "PROJECT_DELETING",
+          "CREDENTIAL_REMOVED",
+          "SOURCE_INVALIDATED"
+        ]
+      },
+      "RetrievalComponent": {
+        "type": "string",
+        "enum": [
+          "VECTOR_SEARCH",
+          "KEYWORD_SEARCH",
+          "SOT_LOOKUP",
+          "ANCESTOR_HISTORY"
+        ]
+      },
+      "DegradedStatus": {
+        "type": "string",
+        "enum": ["PARTIAL", "UNAVAILABLE"]
+      },
+      "ErrorCode": {
+        "type": "string",
+        "enum": [
+          "VALIDATION_ERROR",
+          "INVALID_SSE_CURSOR",
+          "UNAUTHENTICATED",
+          "ACCOUNT_DISABLED",
+          "FORBIDDEN",
+          "RESOURCE_NOT_FOUND",
+          "PROJECT_DELETING",
+          "CHAT_SCOPE_LOCKED",
+          "IDEMPOTENCY_KEY_REUSED",
+          "CHAT_REQUEST_IN_PROGRESS",
+          "CONFLICT_STALE_REVISION",
+          "SOURCE_DELETED",
+          "SSE_CURSOR_EXPIRED",
+          "USER_CREDENTIAL_UNAVAILABLE",
+          "DISCLOSURE_REQUIRED",
+          "INVALID_EXPLICIT_REFERENCE",
+          "EXPLICIT_REFERENCE_BUDGET_EXCEEDED",
+          "STAGE_CONTEXT_LIMIT",
+          "BRANCH_CONTEXT_LIMIT",
+          "APP_USAGE_LIMIT_EXCEEDED",
+          "PROVIDER_RATE_LIMITED",
+          "PROVIDER_QUOTA_EXHAUSTED",
+          "PLATFORM_CREDENTIAL_UNAVAILABLE",
+          "PROVIDER_UNAVAILABLE",
+          "WORKER_LEASE_EXPIRED"
+        ]
+      },
+      "ApiError": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "$ref": "#/components/schemas/ErrorCode"
+          },
+          "message": {
+            "type": "string"
+          },
+          "retryable": {
+            "type": "boolean"
+          },
+          "correlationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "details": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": ["code", "message", "retryable", "correlationId"],
+        "additionalProperties": false
+      },
+      "ErrorEnvelope": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ApiError"
+          }
+        },
+        "required": ["error"],
+        "additionalProperties": false
+      },
+      "TextBlock": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "TEXT"
+          },
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": ["type", "text"],
+        "additionalProperties": false
+      },
+      "QuoteRefBlock": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "QUOTE_REF"
+          },
+          "quoteRefId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          }
+        },
+        "required": ["type", "quoteRefId"],
+        "additionalProperties": false
+      },
+      "ContentBlock": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/TextBlock"
+          },
+          {
+            "$ref": "#/components/schemas/QuoteRefBlock"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "type",
+          "mapping": {
+            "TEXT": "#/components/schemas/TextBlock",
+            "QUOTE_REF": "#/components/schemas/QuoteRefBlock"
+          }
+        }
+      },
+      "Locator": {
+        "type": "object",
+        "properties": {
+          "charStart": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "charEnd": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1
+          },
+          "prefixAnchor": {
+            "type": "string",
+            "maxLength": 32
+          },
+          "suffixAnchor": {
+            "type": "string",
+            "maxLength": 32
+          }
+        },
+        "required": ["charStart", "charEnd", "prefixAnchor", "suffixAnchor"],
+        "additionalProperties": false
+      },
+      "QuoteInput": {
+        "type": "object",
+        "properties": {
+          "quoteRefId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "sourceKind": {
+            "$ref": "#/components/schemas/QuoteSourceKind"
+          },
+          "sourceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sourceRevision": {
+            "type": "string"
+          },
+          "locator": {
+            "$ref": "#/components/schemas/Locator"
+          },
+          "contentHashSha256Hex": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "snapshotText": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "quoteRefId",
+          "sourceKind",
+          "sourceId",
+          "sourceRevision",
+          "locator",
+          "contentHashSha256Hex",
+          "snapshotText"
+        ],
+        "additionalProperties": false
+      },
+      "StageReference": {
+        "type": "object",
+        "properties": {
+          "granularity": {
+            "type": "string",
+            "const": "STAGE"
+          },
+          "targetStageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "targetChapterId": {
+            "type": "null"
+          },
+          "targetTurnId": {
+            "type": "null"
+          }
+        },
+        "required": ["granularity", "targetStageId"],
+        "additionalProperties": false
+      },
+      "ChapterReference": {
+        "type": "object",
+        "properties": {
+          "granularity": {
+            "type": "string",
+            "const": "CHAPTER"
+          },
+          "targetStageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "targetChapterId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "targetTurnId": {
+            "type": "null"
+          }
+        },
+        "required": ["granularity", "targetStageId", "targetChapterId"],
+        "additionalProperties": false
+      },
+      "TurnReference": {
+        "type": "object",
+        "properties": {
+          "granularity": {
+            "type": "string",
+            "const": "TURN"
+          },
+          "targetStageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "targetChapterId": {
+            "type": "null"
+          },
+          "targetTurnId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": ["granularity", "targetStageId", "targetTurnId"],
+        "additionalProperties": false
+      },
+      "MainReference": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/StageReference"
+          },
+          {
+            "$ref": "#/components/schemas/ChapterReference"
+          },
+          {
+            "$ref": "#/components/schemas/TurnReference"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "granularity",
+          "mapping": {
+            "STAGE": "#/components/schemas/StageReference",
+            "CHAPTER": "#/components/schemas/ChapterReference",
+            "TURN": "#/components/schemas/TurnReference"
+          }
+        }
+      },
+      "ChatInput": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "conversationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "mainStageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "subBranchId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "userContentBlocks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContentBlock"
+            },
+            "minItems": 1
+          },
+          "quotes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuoteInput"
+            },
+            "default": []
+          },
+          "mainReferences": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MainReference"
+            },
+            "default": []
+          }
+        },
+        "required": [
+          "projectId",
+          "conversationId",
+          "mainStageId",
+          "userContentBlocks"
+        ],
+        "additionalProperties": false
+      },
+      "ChatAccepted": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "correlationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RequestState"
+          },
+          "effectivePrivacyTierPlanned": {
+            "$ref": "#/components/schemas/PrivacyTier"
+          },
+          "eventsUrl": {
+            "type": "string"
+          },
+          "statusUrl": {
+            "type": "string"
+          },
+          "cancelUrl": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$"
+          }
+        },
+        "required": [
+          "requestId",
+          "correlationId",
+          "status",
+          "eventsUrl",
+          "statusUrl",
+          "cancelUrl",
+          "createdAt"
+        ],
+        "additionalProperties": false
+      },
+      "RequestStatus": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RequestState"
+          },
+          "turnId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "lastEventId": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "errorCode": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorCode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$"
+          },
+          "finishedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "Z$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "requestId",
+          "status",
+          "turnId",
+          "lastEventId",
+          "errorCode",
+          "createdAt",
+          "finishedAt"
+        ],
+        "additionalProperties": false
+      },
+      "CancelResult": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TerminalState"
+          },
+          "alreadyTerminal": {
+            "type": "boolean"
+          }
+        },
+        "required": ["requestId", "status", "alreadyTerminal"],
+        "additionalProperties": false
+      },
+      "QuoteSaved": {
+        "type": "object",
+        "properties": {
+          "quoteRefId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sourceKind": {
+            "$ref": "#/components/schemas/QuoteSourceKind"
+          },
+          "sourceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sourceRevision": {
+            "type": "string"
+          },
+          "locator": {
+            "$ref": "#/components/schemas/Locator"
+          },
+          "contentHashSha256Hex": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "snapshotText": {
+            "type": "string"
+          },
+          "linkStatus": {
+            "$ref": "#/components/schemas/LinkStatus"
+          },
+          "excludeFromAutoKb": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "quoteRefId",
+          "sourceKind",
+          "sourceId",
+          "sourceRevision",
+          "locator",
+          "contentHashSha256Hex",
+          "snapshotText",
+          "linkStatus",
+          "excludeFromAutoKb"
+        ],
+        "additionalProperties": false
+      },
+      "Turn": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "projectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "conversationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "mainStageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "subBranchId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "chapterId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sequenceNo": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1
+          },
+          "sourceRevision": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1
+          },
+          "userContentBlocks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContentBlock"
+            },
+            "minItems": 1
+          },
+          "quotes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuoteSaved"
+            }
+          },
+          "mainReferences": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MainReference"
+            }
+          },
+          "assistantText": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$"
+          }
+        },
+        "required": [
+          "id",
+          "mainStageId",
+          "subBranchId",
+          "sequenceNo",
+          "sourceRevision",
+          "userContentBlocks",
+          "quotes",
+          "mainReferences",
+          "assistantText",
+          "createdAt"
+        ],
+        "additionalProperties": false
+      },
+      "Turns": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Turn"
+            }
+          },
+          "nextAfterSequence": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "format": "int64",
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hasMore": {
+            "type": "boolean"
+          }
+        },
+        "required": ["items", "nextAfterSequence", "hasMore"],
+        "additionalProperties": false
+      },
+      "PublicUsage": {
+        "type": "object",
+        "properties": {
+          "totalInputTokens": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "format": "int64",
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "totalOutputTokens": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "format": "int64",
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "totalThoughtTokens": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "format": "int64",
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "totalCachedTokens": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "format": "int64",
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "totalTokens": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "format": "int64",
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "totalInputTokens",
+          "totalOutputTokens",
+          "totalThoughtTokens",
+          "totalCachedTokens",
+          "totalTokens"
+        ],
+        "additionalProperties": false
+      },
+      "EventAccepted": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "const": "ACCEPTED"
+          },
+          "projectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "mainStageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "subBranchId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "requestId",
+          "status",
+          "projectId",
+          "mainStageId",
+          "subBranchId"
+        ],
+        "additionalProperties": false
+      },
+      "DegradedComponent": {
+        "type": "object",
+        "properties": {
+          "component": {
+            "$ref": "#/components/schemas/RetrievalComponent"
+          },
+          "status": {
+            "$ref": "#/components/schemas/DegradedStatus"
+          },
+          "reasonCode": {
+            "type": "string"
+          }
+        },
+        "required": ["component", "status", "reasonCode"],
+        "additionalProperties": false
+      },
+      "EventDegraded": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "overallStatus": {
+            "$ref": "#/components/schemas/DegradedStatus"
+          },
+          "components": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DegradedComponent"
+            }
+          },
+          "userMessage": {
+            "type": "string"
+          }
+        },
+        "required": ["requestId", "overallStatus", "components", "userMessage"],
+        "additionalProperties": false
+      },
+      "EventStarted": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "effectivePrivacyTier": {
+            "$ref": "#/components/schemas/PrivacyTier"
+          },
+          "mixedTierWarning": {
+            "type": "boolean"
+          },
+          "platformTasksInUnpaidTier": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "rolloverSuggested": {
+            "type": "boolean"
+          },
+          "estimatedInputTokens": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "requestId",
+          "effectivePrivacyTier",
+          "mixedTierWarning",
+          "platformTasksInUnpaidTier",
+          "rolloverSuggested",
+          "estimatedInputTokens"
+        ],
+        "additionalProperties": false
+      },
+      "EventDelta": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": ["requestId", "text"],
+        "additionalProperties": false
+      },
+      "EventCompleted": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "turnId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sequenceNo": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1
+          },
+          "sourceRevision": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1
+          },
+          "finishReason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "modelUsed": {
+            "type": "string"
+          },
+          "effectivePrivacyTier": {
+            "$ref": "#/components/schemas/PrivacyTier"
+          },
+          "usageStatus": {
+            "$ref": "#/components/schemas/UsageStatus"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/PublicUsage"
+          }
+        },
+        "required": [
+          "requestId",
+          "turnId",
+          "sequenceNo",
+          "sourceRevision",
+          "finishReason",
+          "modelUsed",
+          "effectivePrivacyTier",
+          "usageStatus",
+          "usage"
+        ],
+        "additionalProperties": false
+      },
+      "EventFailed": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "errorCode": {
+            "$ref": "#/components/schemas/ErrorCode"
+          },
+          "message": {
+            "type": "string"
+          },
+          "retryable": {
+            "type": "boolean"
+          },
+          "retryAfterSeconds": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "format": "int64",
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "requestId",
+          "errorCode",
+          "message",
+          "retryable",
+          "retryAfterSeconds"
+        ],
+        "additionalProperties": false
+      },
+      "EventCancelled": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/CancelReason"
+          }
+        },
+        "required": ["requestId", "reason"],
+        "additionalProperties": false
+      },
+      "OffsetPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {}
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "size": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "totalElements": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "totalPages": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "hasNext": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "size",
+          "totalElements",
+          "totalPages",
+          "hasNext"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "x-sources": [
+    {
+      "pageId": "1704081",
+      "version": 7
+    },
+    {
+      "pageId": "7635034",
+      "version": 2
+    }
+  ],
+  "x-sse-events": {
+    "request.accepted": "EventAccepted",
+    "retrieval.degraded": "EventDegraded",
+    "assistant.started": "EventStarted",
+    "assistant.delta": "EventDelta",
+    "assistant.completed": "EventCompleted",
+    "request.failed": "EventFailed",
+    "request.cancelled": "EventCancelled"
+  }
+}

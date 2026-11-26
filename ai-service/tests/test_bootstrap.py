@@ -6,7 +6,6 @@ from pydantic import ValidationError
 
 from app.config import Settings, get_settings
 from app.main import app
-from app.providers.factory import get_provider
 
 TOKEN = "test-service-token-at-least-24-characters"
 
@@ -16,11 +15,9 @@ def client(monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient]:
     monkeypatch.setenv("CF_INTERNAL_SERVICE_TOKEN", TOKEN)
     monkeypatch.setenv("CF_PROVIDER_MODE", "MOCK")
     get_settings.cache_clear()
-    get_provider.cache_clear()
     with TestClient(app) as test_client:
         yield test_client
     get_settings.cache_clear()
-    get_provider.cache_clear()
 
 
 def test_internal_status_requires_the_service_token(client: TestClient) -> None:

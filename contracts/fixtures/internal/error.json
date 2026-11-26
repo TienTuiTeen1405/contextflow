@@ -1,0 +1,21 @@
+{
+  "error": {
+    "correlation_id": "64254ba2-ba13-4a15-af4b-8e262140d080",
+    "provider_call_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    "dispatched": true,
+    "occurred_at": "2026-11-26T00:00:00Z",
+    "completed_at": "2026-11-26T00:00:00Z",
+    "error_category": "RATE_LIMIT_RETRYABLE",
+    "error_code": "PROVIDER_RATE_LIMITED",
+    "retryable": true,
+    "retry_after_seconds": 12,
+    "usage_status": "UNAVAILABLE",
+    "usage": {
+      "input_tokens": null,
+      "output_tokens": null,
+      "total_tokens": null,
+      "cached_tokens": null,
+      "reasoning_tokens": null
+    }
+  }
+}
