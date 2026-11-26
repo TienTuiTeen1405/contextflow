@@ -1,0 +1,57 @@
+name: Đầu việc của nhóm
+description: Nhận một chức năng nhỏ, có người phụ trách và tiêu chí nghiệm thu; không cần Jira.
+body:
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Mục tiêu và phạm vi
+      description: Một đầu việc có kết quả rõ ràng; ghi cả phần chưa làm trong đợt này.
+      placeholder: Ví dụ triển khai API tạo Project; chưa làm archive hoặc sao chép template.
+    validations:
+      required: true
+  - type: input
+    id: people
+    attributes:
+      label: Người thực hiện và reviewer
+      description: Một người chịu trách nhiệm và reviewer khác tác giả; dùng GitHub username khi đã có.
+      placeholder: Người thực hiện ...; reviewer ...
+    validations:
+      required: true
+  - type: input
+    id: branch
+    attributes:
+      label: Branch dự kiến
+      placeholder: feature/project-create
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: API, domain và dữ liệu liên quan
+      description: Method/path, request/response, mã lỗi, bảng sở hữu và nguồn BranOS nếu có.
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Phụ thuộc và phần dùng chung
+      description: Link issue/PR, helper cần có, người cần phối hợp; ghi không có nếu độc lập.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Tiêu chí nghiệm thu và cách kiểm tra
+      description: Kết quả quan sát được, trường hợp thành công/lỗi/quyền theo phạm vi; ghi môi trường hoặc Mock.
+      placeholder: |
+        - Người khác chạy được kịch bản ...
+        - Dữ liệu được lưu/đọc lại đúng ...
+        - Input sai hoặc tài nguyên ngoài quyền trả ...
+    validations:
+      required: true
+  - type: textarea
+    id: progress
+    attributes:
+      label: Tiến độ và bàn giao
+      description: Cập nhật Chưa làm / Đang làm / Chờ review / Hoàn thành, vướng mắc, link PR và kết quả kiểm chứng.
+      value: "Chưa làm. Chưa có PR."

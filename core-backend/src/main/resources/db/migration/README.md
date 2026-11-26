@@ -14,4 +14,4 @@ Không trộn DDL 41 bảng trong Database Design tham chiếu hoặc lịch 2 f
 
 Hiệu chỉnh có chủ đích trước lần chạy đầu: V001 dùng `gemini-3.8-flash` cho cả 8 tác vụ sinh văn bản theo CF-DEC-037/047 và ghi chú DES-DIFF-01 trên trang nguồn. Hai tác vụ embedding giữ `gemini-embedding-2`; không seed Credential, tài khoản Admin hay dữ liệu người dùng. Registry không kích hoạt gọi Gemini thật trong scaffold MOCK.
 
-Xem [hướng dẫn database](../../../../../../docs/database.md) về kết nối, phân quyền và kiểm thử PostgreSQL/Testcontainers.
+Xem [hướng dẫn setup & database](../../../../../../docs/SETUP-GUIDE.md#5-database-postgresql-16--pgvector--flyway) về kết nối, xem bảng trong IntelliJ và kiểm thử PostgreSQL/Testcontainers.
