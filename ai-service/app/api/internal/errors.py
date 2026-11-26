@@ -17,6 +17,7 @@ def failure_payload(
     occurred_at: datetime | None = None,
     category: ErrorCategory = "PERMANENT_INPUT_ERROR",
     retryable: bool = False,
+    retry_after_seconds: int | None = None,
 ) -> ProviderFailure:
     trace: dict[str, UUID] = {}
     for key in ("correlation_id", "provider_call_id"):
@@ -33,7 +34,7 @@ def failure_payload(
         error_category=category,
         error_code=code,
         retryable=retryable,
-        retry_after_seconds=None,
+        retry_after_seconds=retry_after_seconds,
         usage_status="UNAVAILABLE",
         usage=unavailable_usage(),
     )
@@ -47,9 +48,17 @@ def failure_response(
     dispatched: bool = False,
     occurred_at: datetime | None = None,
     category: ErrorCategory = "PERMANENT_INPUT_ERROR",
+    retryable: bool = False,
+    retry_after_seconds: int | None = None,
 ) -> JSONResponse:
     failure = failure_payload(
-        code, body, dispatched=dispatched, occurred_at=occurred_at, category=category
+        code,
+        body,
+        dispatched=dispatched,
+        occurred_at=occurred_at,
+        category=category,
+        retryable=retryable,
+        retry_after_seconds=retry_after_seconds,
     )
     return JSONResponse(
         status_code=status,
