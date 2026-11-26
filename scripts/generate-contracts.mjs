@@ -66,7 +66,11 @@ function javaModule(spec, name) {
       inlineEnums[hint] = s.enum;
       return hint;
     }
-    if (s.anyOf || s.oneOf) return "JsonNode";
+    if (s.oneOf)
+      throw new Error(
+        "Promote closed oneOf to a named component before generating " + hint,
+      );
+    if (s.anyOf) return "JsonNode";
     if (s.type === "array")
       return "List<" + type(s.items ?? {}, hint + "Item") + ">";
     if (s.type === "object" || !s.type) return "JsonNode";

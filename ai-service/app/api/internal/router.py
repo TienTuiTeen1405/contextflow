@@ -2,7 +2,7 @@ import json
 from collections.abc import AsyncIterator
 from typing import Annotated, Any, Never
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Response
+from fastapi import APIRouter, Depends, Header, Response
 from fastapi.responses import JSONResponse, StreamingResponse
 from jsonschema import Draft202012Validator, SchemaError
 from pydantic import BaseModel, SecretStr
@@ -33,10 +33,8 @@ Provider = Annotated[ProviderAdapter, Depends(get_provider)]
 
 
 def provider_credential(
-    value: Annotated[str | None, Header(alias="X-Provider-Credential")] = None,
+    value: Annotated[str, Header(alias="X-Provider-Credential", min_length=1)],
 ) -> SecretStr:
-    if not value:
-        raise HTTPException(status_code=422, detail="Provider credential required")
     return SecretStr(value)
 
 

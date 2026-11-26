@@ -20,16 +20,10 @@
           {
             "name": "X-Provider-Credential",
             "in": "header",
-            "required": false,
+            "required": true,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
+              "minLength": 1,
               "title": "X-Provider-Credential"
             }
           }
@@ -112,16 +106,10 @@
           {
             "name": "X-Provider-Credential",
             "in": "header",
-            "required": false,
+            "required": true,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
+              "minLength": 1,
               "title": "X-Provider-Credential"
             }
           }
@@ -204,16 +192,10 @@
           {
             "name": "X-Provider-Credential",
             "in": "header",
-            "required": false,
+            "required": true,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
+              "minLength": 1,
               "title": "X-Provider-Credential"
             }
           }
@@ -296,16 +278,10 @@
           {
             "name": "X-Provider-Credential",
             "in": "header",
-            "required": false,
+            "required": true,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
+              "minLength": 1,
               "title": "X-Provider-Credential"
             }
           }
@@ -412,21 +388,7 @@
             "anyOf": [
               {
                 "items": {
-                  "oneOf": [
-                    {
-                      "$ref": "#/components/schemas/TextBlock"
-                    },
-                    {
-                      "$ref": "#/components/schemas/QuoteRefBlock"
-                    }
-                  ],
-                  "discriminator": {
-                    "propertyName": "type",
-                    "mapping": {
-                      "QUOTE_REF": "#/components/schemas/QuoteRefBlock",
-                      "TEXT": "#/components/schemas/TextBlock"
-                    }
-                  }
+                  "$ref": "#/components/schemas/ContentBlock"
                 },
                 "type": "array"
               },
@@ -451,21 +413,7 @@
         "properties": {
           "content_blocks": {
             "items": {
-              "oneOf": [
-                {
-                  "$ref": "#/components/schemas/TextBlock"
-                },
-                {
-                  "$ref": "#/components/schemas/QuoteRefBlock"
-                }
-              ],
-              "discriminator": {
-                "propertyName": "type",
-                "mapping": {
-                  "QUOTE_REF": "#/components/schemas/QuoteRefBlock",
-                  "TEXT": "#/components/schemas/TextBlock"
-                }
-              }
+              "$ref": "#/components/schemas/ContentBlock"
             },
             "type": "array",
             "title": "Content Blocks"
@@ -1261,22 +1209,22 @@
         "type": "object"
       },
       "QuoteRefBlock": {
+        "additionalProperties": false,
         "properties": {
           "type": {
-            "type": "string",
             "const": "QUOTE_REF",
-            "title": "Type"
+            "title": "Type",
+            "type": "string"
           },
           "quote_ref_id": {
-            "type": "string",
             "minLength": 1,
-            "title": "Quote Ref Id"
+            "title": "Quote Ref Id",
+            "type": "string"
           }
         },
-        "additionalProperties": false,
-        "type": "object",
         "required": ["type", "quote_ref_id"],
-        "title": "QuoteRefBlock"
+        "title": "QuoteRefBlock",
+        "type": "object"
       },
       "ResponseInstructions": {
         "properties": {
@@ -1438,21 +1386,21 @@
         "title": "StreamOptions"
       },
       "TextBlock": {
+        "additionalProperties": false,
         "properties": {
           "type": {
-            "type": "string",
             "const": "TEXT",
-            "title": "Type"
+            "title": "Type",
+            "type": "string"
           },
           "text": {
-            "type": "string",
-            "title": "Text"
+            "title": "Text",
+            "type": "string"
           }
         },
-        "additionalProperties": false,
-        "type": "object",
         "required": ["type", "text"],
-        "title": "TextBlock"
+        "title": "TextBlock",
+        "type": "object"
       },
       "Usage": {
         "additionalProperties": false,
@@ -1738,6 +1686,24 @@
         ],
         "title": "ProviderCompleted",
         "type": "object"
+      },
+      "ContentBlock": {
+        "discriminator": {
+          "mapping": {
+            "QUOTE_REF": "#/components/schemas/QuoteRefBlock",
+            "TEXT": "#/components/schemas/TextBlock"
+          },
+          "propertyName": "type"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/TextBlock"
+          },
+          {
+            "$ref": "#/components/schemas/QuoteRefBlock"
+          }
+        ],
+        "title": "ContentBlock"
       }
     },
     "securitySchemes": {

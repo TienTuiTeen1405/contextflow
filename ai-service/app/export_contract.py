@@ -4,8 +4,10 @@ import json
 import sys
 from pathlib import Path
 
+from pydantic import RootModel
+
 from app.main import app
-from app.schemas.contracts import INTERNAL_EVENTS
+from app.schemas.contracts import INTERNAL_EVENTS, ContentBlock
 
 
 def contract() -> dict[str, object]:
@@ -19,6 +21,27 @@ def contract() -> dict[str, object]:
         schema = model.model_json_schema(ref_template="#/components/schemas/{model}")
         schemas.update(schema.pop("$defs", {}))
         schemas[model.__name__] = schema
+    block_schema = RootModel[ContentBlock].model_json_schema(
+        ref_template="#/components/schemas/{model}"
+    )
+    schemas.update(block_schema.pop("$defs", {}))
+    block_schema["title"] = "ContentBlock"
+
+    def named_blocks(value: object) -> object:
+        if isinstance(value, dict):
+            discriminator = value.get("discriminator", {})
+            if discriminator.get("propertyName") == "type" and set(
+                discriminator.get("mapping", {})
+            ) == {"TEXT", "QUOTE_REF"}:
+                return {"$ref": "#/components/schemas/ContentBlock"}
+            return {key: named_blocks(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [named_blocks(item) for item in value]
+        return value
+
+    for name, schema in list(schemas.items()):
+        schemas[name] = named_blocks(schema)
+    schemas["ContentBlock"] = block_schema
     spec["x-sse-events"] = {event: model.__name__ for event, model in INTERNAL_EVENTS.items()}
     spec["x-sources"] = [{"pageId": "7536753", "version": 2}]
     return spec

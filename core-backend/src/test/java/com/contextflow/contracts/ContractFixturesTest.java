@@ -141,6 +141,33 @@ class ContractFixturesTest {
     }
 
     @Test
+    void internalContentBlocksAreTypedAndRejectUnexpectedKindsOrFields() throws Exception {
+        ObjectNode input = fixture("internal/stream-input.json").deepCopy();
+        var valid = MAPPER.treeToValue(input, InternalAi.StreamInput.class);
+        assertInstanceOf(
+                InternalAi.QuoteRefBlock.class,
+                valid.prompt().currentUserRequest().contentBlocks().get(1));
+        assertInstanceOf(
+                InternalAi.QuoteRefBlock.class,
+                valid.prompt().continuity().get(0).userContentBlocks().get(1));
+        ObjectNode block =
+                (ObjectNode)
+                        input.get("prompt")
+                                .get("current_user_request")
+                                .get("content_blocks")
+                                .get(0);
+        block.put("type", "IMAGE");
+        assertThrows(
+                JsonMappingException.class,
+                () -> MAPPER.treeToValue(input, InternalAi.StreamInput.class));
+        block.put("type", "TEXT");
+        block.put("exclude_from_auto_kb", true);
+        assertThrows(
+                JsonMappingException.class,
+                () -> MAPPER.treeToValue(input, InternalAi.StreamInput.class));
+    }
+
+    @Test
     void missingUsageStaysNullAndRequiredFieldsCannotDisappear() throws Exception {
         JsonNode before = fixture("internal/provider.completed.json");
         var dto = MAPPER.treeToValue(before, InternalAi.ProviderCompleted.class);

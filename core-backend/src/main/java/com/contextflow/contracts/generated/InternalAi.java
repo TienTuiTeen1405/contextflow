@@ -25,12 +25,12 @@ public final class InternalAi {
         @JsonProperty(value = "native_output_steps", required = true) @NotNull @Valid
         List<JsonNode> nativeOutputSteps,
         @JsonProperty(value = "user_content_blocks", required = false) @JsonInclude(JsonInclude.Include.NON_NULL) @Valid
-        List<JsonNode> userContentBlocks
+        List<ContentBlock> userContentBlocks
     ) {}
 
     public record CurrentUserRequest(
         @JsonProperty(value = "content_blocks", required = true) @NotNull @Valid
-        List<JsonNode> contentBlocks
+        List<ContentBlock> contentBlocks
     ) {}
 
     public record DegradedComponent(
@@ -271,7 +271,7 @@ public final class InternalAi {
         String type,
         @JsonProperty(value = "quote_ref_id", required = true) @NotNull @CodePointSize(min = 1, max = 2147483647)
         String quoteRefId
-    ) {}
+    ) implements ContentBlock {}
 
     public record ResponseInstructions(
         @JsonProperty(value = "intent_context", required = true) @NotNull @Valid
@@ -332,7 +332,7 @@ public final class InternalAi {
         String type,
         @JsonProperty(value = "text", required = true) @NotNull
         String text
-    ) {}
+    ) implements ContentBlock {}
 
     public record Usage(
         @JsonProperty(value = "input_tokens", required = true) @Min(0)
@@ -409,6 +409,13 @@ public final class InternalAi {
         @JsonProperty(value = "usage", required = true) @NotNull @Valid
         Usage usage
     ) {}
+
+    @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXISTING_PROPERTY, property = "type", visible = true)
+    @JsonSubTypes({
+        @JsonSubTypes.Type(value = QuoteRefBlock.class, name = "QUOTE_REF"),
+        @JsonSubTypes.Type(value = TextBlock.class, name = "TEXT")
+    })
+    public sealed interface ContentBlock permits TextBlock, QuoteRefBlock {}
 
     public enum DegradedComponentComponent {
         @JsonProperty("VECTOR_SEARCH") VECTOR_SEARCH,

@@ -23,12 +23,14 @@ Các kiểm tra scaffold không thay thế nghiệm thu tính năng Chat/Auth/KB
 ## Hợp đồng API, ownership và local presets — 26/11/2026
 
 - Nguồn: BranOS-04-1 v7, 04-2 v2 và 04-6 v2. Đã có public/internal OpenAPI 3.1, 25 mã lỗi, 25 fixture JSON, 7 public event và 4 internal event. Type Web và Java DTO sinh từ cùng nguồn; internal OpenAPI được xuất từ Pydantic/FastAPI thực tế.
-- Core `verify` trên JDK 21: 42 kiểm thử đạt (30 DTO/fixture/Unicode/null/registry + 10 database + 2 security), Spotless và JAR đạt. Lượt đầu thiếu Docker daemon đã được chạy lại sau khi khởi động Docker Desktop; không bỏ qua schema tests.
-- AI: Ruff lint/format, mypy và 49 pytest đạt; bao gồm bốn endpoint Mock qua HTTP, auth trước body, structured output, vector hữu hạn/chiều/count, usage null, opaque native JSON, lỗi/terminal stream và schema ref không gọi mạng. Có deprecation warning TestClient Starlette/httpx như trước.
+- Core `verify` trên JDK 21: 43 kiểm thử đạt (31 DTO/fixture/Unicode/null/registry + 10 database + 2 security), Spotless và JAR đạt. Lượt đầu thiếu Docker daemon đã được chạy lại sau khi khởi động Docker Desktop; không bỏ qua schema tests.
+- AI: Ruff lint/format, mypy và 50 pytest đạt; bao gồm bốn endpoint Mock qua HTTP, service auth trước body, provider header bắt buộc, structured output, vector hữu hạn/chiều/count, usage null, opaque native JSON, lỗi/terminal stream và schema ref không gọi mạng. Có deprecation warning TestClient Starlette/httpx như trước.
 - Web: lint/typecheck, production build và Prettier toàn repo đạt. `contracts:check` xác nhận generated code và OpenAPI không lệch; dependency production audit báo 0 vulnerabilities.
 - Tooling: 3 kiểm thử setup local đạt; preset mới tạo secret đồng bộ, đổi Docker/IDE giữ DB password/KEK và từ chối tự xoay placeholder của DB đã tồn tại.
 - Ownership: đủ 43 bảng có domain/Entity/Repository và review role. Thành viên chưa được gán theo thông tin người dùng; CODEOWNERS thật chưa được tạo và không tuyên bố GitHub review đã được cưỡng chế.
 - Docker: các image Core, AI và Web build thành công; stack lên healthy. `local:check` xác nhận Web config → Core 8080, readiness UP, auth envelope và CORS. Các kết quả này xác nhận nền hợp đồng; không nghiệm thu business Chat/JWT/worker/public SSE hoặc PoC Gemini.
+- Kiểm tra HTTP trực tiếp trong AI container với fixture tổng hợp: cả `/streams`, `/generate`, `/embeddings`, `/credentials/verify` đạt, response đánh dấu MOCK; vector đúng số lượng/1536 chiều/hữu hạn, usage chưa biết giữ null và Verify vẫn NOT_TESTED. Preset cuối giữ AI không publish ra host.
+- Preset IDE: `setup:local -- --mode ide`, Compose override DB/AI và `dev:core` trên JDK 21 đã chạy thành công Core 18080, Flyway validate schema 005; `local:check` đạt Core readiness/Auth/CORS và AI service identity/MOCK tại 18000. Dùng cùng file env với run config IntelliJ đã chia sẻ. Process Core kiểm thử đã dừng; workspace được đưa về preset Docker mặc định sau lượt thử.
 - Repo chưa có remote: CI đã được khai báo/cập nhật, chưa có kết quả pipeline trên repository chung.
 
 ## Standards
@@ -39,11 +41,17 @@ Review bổ sung các thay đổi lockfile, Maven cache, giới hạn RAM build 
 
 Review database `bf567e8...c3e6578`: không có phát hiện Standards cần sửa về quyền sở hữu DB, kỷ luật Flyway, secret, ranh giới dịch vụ hoặc quy ước repo. Đối chiếu cả 5 thân SQL với nguồn Confluence khớp sau khi loại phần dẫn nguồn và hiệu chỉnh seed đã công bố.
 
+Review hợp đồng/ownership/local `6b369bc...8d51553`: không có phát hiện Standards cần sửa. Core giữ quyền persistence, AI stateless/Mock, Web chỉ import public contracts; nguồn sinh DTO và việc chưa gán named reviewer đều được mô tả rõ. Chỉnh sửa `.gitignore` và format POM của người dùng nằm ngoài review/commit.
+
 ## Spec
 
 Review độc lập cùng diff scaffold ban đầu: không có sai lệch đáng kể trong phạm vi đã bàn giao. Schema được tích hợp trong thay đổi database tiếp theo; các luồng nghiệp vụ vẫn chưa được nghiệm thu.
 
 Review Spec của phần database phát hiện 1 điểm P3 trong kiểm thử DB-IT-09: mới đọc hàng vector đầu tiên nên chưa chứng minh toàn bộ tập kết quả hợp lệ. Đã sửa để đọc mọi ID, kiểm tra tập đầy đủ trên Project nhỏ và exact fallback, kiểm tra ANN không lẫn ID/không trùng trên dữ liệu lớn, thêm fixture generation SUPERSEDED. Review lại xác nhận đã xử lý; không còn phát hiện Spec cần sửa.
+
+Review Spec của phần hợp đồng phát hiện 1 điểm P2: union ContentBlock nội bộ bị sinh thành JsonNode ở Java. Đã chuẩn hóa thành named component và sealed union, giữ native JSON opaque; thêm regression kiểm tra kiểu current/history và từ chối IMAGE/trường thừa. Generator từ chối closed oneOf chưa được đặt tên thay vì âm thầm hạ kiểu. Header X-Provider-Credential cũng được đối chiếu lại và đặt required/minLength ở runtime/OpenAPI với kiểm thử riêng. Reviewer xác nhận các sửa đổi; không còn phát hiện Spec cần sửa.
+
+Review hợp đồng kết thúc: Standards 0 phát hiện; Spec 0 còn mở (1 P2 đã xử lý).
 
 ## Môi trường
 

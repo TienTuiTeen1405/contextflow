@@ -90,6 +90,26 @@ def test_authentication_happens_before_invalid_payload_is_parsed(client: TestCli
     assert response.json()["error"]["dispatched"] is False
 
 
+def test_provider_header_is_required_in_all_four_http_contracts(client: TestClient) -> None:
+    from app.export_contract import contract
+
+    document = contract()
+    paths = document["paths"]
+    for operation in paths.values():  # type: ignore[attr-defined]
+        headers = {
+            p["name"]: p for p in operation["post"].get("parameters", []) if p["in"] == "header"
+        }
+        assert headers["X-Provider-Credential"]["required"] is True
+    response = client.post(
+        "/internal/v1/ai/generate",
+        json=sample("internal/generate-input.json"),
+        headers={"Authorization": f"Bearer {TOKEN}"},
+    )
+    assert response.status_code == 422
+    validate("internal", "InternalError", response.json())
+    assert response.json()["error"]["dispatched"] is False
+
+
 def test_all_four_tasks_serialize_the_shared_contract(client: TestClient) -> None:
     cases = [
         ("generate", "generate-input.json", "GenerateResult"),
