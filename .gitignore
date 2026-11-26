@@ -22,3 +22,18 @@ Thumbs.db
 .tools/
 .scratch/
 agent/
+# Java build artifacts
+*.class
+*.ctxt
+.mtj.tmp/
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# JVM crash logs
+hs_err_pid*
+replay_pid*
