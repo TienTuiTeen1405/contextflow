@@ -10,6 +10,12 @@ from referencing import Registry
 from referencing.exceptions import NoSuchResource
 
 from app.api.internal.errors import failure_payload, failure_response
+from app.prompt_builder import (
+    PromptBuilder,
+    get_prompt_builder,
+    reset_current_built_prompt,
+    set_current_built_prompt,
+)
 from app.providers.base import AdapterStatus, ProviderAdapter
 from app.providers.factory import get_provider
 from app.schemas.contracts import (
@@ -77,10 +83,17 @@ def adapter_status(provider: Provider) -> AdapterStatus:
     response_model=None,
 )
 async def streams(
-    request: StreamInput, provider: Provider, credential: Credential
+    request: StreamInput,
+    provider: Provider,
+    credential: Credential,
+    prompt_builder: Annotated[PromptBuilder, Depends(get_prompt_builder)],
 ) -> StreamingResponse | JSONResponse:
     iterator = None
+    built_prompt = None
+    token = None
     try:
+        built_prompt = prompt_builder.build(request.prompt)
+        token = set_current_built_prompt(built_prompt)
         iterator = provider.stream(request)
         event, payload = await anext(iterator)
         if event != "provider.dispatched":
@@ -96,6 +109,9 @@ async def streams(
         return failure_response(
             502, "ADAPTER_UNAVAILABLE", request.model_dump(), category="UNKNOWN_REQUIRES_REVIEW"
         )
+    finally:
+        if token is not None:
+            reset_current_built_prompt(token)
 
     def frame(event: str, payload: BaseModel) -> str:
         data = json.dumps(payload.model_dump(mode="json"), ensure_ascii=False, allow_nan=False)
@@ -103,6 +119,8 @@ async def streams(
 
     async def events() -> AsyncIterator[str]:
         assert iterator is not None
+        assert built_prompt is not None
+        stream_token = set_current_built_prompt(built_prompt)
         try:
             yield frame("provider.dispatched", dispatched)
             async for event, payload in iterator:
@@ -130,6 +148,7 @@ async def streams(
             )
             yield frame("provider.failed", failed)
         finally:
+            reset_current_built_prompt(stream_token)
             await close_stream(iterator)
 
     return StreamingResponse(
@@ -139,19 +158,29 @@ async def streams(
 
 @router.post("/generate", response_model=GenerateResult, responses=ERRORS)
 def generate(
-    request: GenerateInput, provider: Provider, credential: Credential, response: Response
+    request: GenerateInput,
+    provider: Provider,
+    credential: Credential,
+    response: Response,
+    prompt_builder: Annotated[PromptBuilder, Depends(get_prompt_builder)],
 ) -> GenerateResult | JSONResponse:
     if request.response_schema is not None:
         try:
             Draft202012Validator.check_schema(request.response_schema)
         except SchemaError:
             return failure_response(422, "INVALID_RESPONSE_SCHEMA", request.model_dump())
+    token = None
     try:
+        built_prompt = prompt_builder.build(request.prompt)
+        token = set_current_built_prompt(built_prompt)
         result = provider.generate(request)
     except Exception:
         return failure_response(
             502, "ADAPTER_UNAVAILABLE", request.model_dump(), category="UNKNOWN_REQUIRES_REVIEW"
         )
+    finally:
+        if token is not None:
+            reset_current_built_prompt(token)
     try:
         result = GenerateResult.model_validate(result.model_dump())
         if request.response_schema is not None:
