@@ -1,0 +1,3 @@
+# Explicit local single-user demo profile. The default profile stays deny-by-default.
+server:
+  address: ${CF_SERVER_ADDRESS:127.0.0.1}
