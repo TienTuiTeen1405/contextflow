@@ -10,7 +10,7 @@ class Settings(BaseSettings):
         env_prefix="CF_", env_file=".env", extra="ignore", hide_input_in_errors=True
     )
 
-    provider_mode: Literal["MOCK"] = "MOCK"
+    provider_mode: Literal["MOCK", "GEMINI_INTERACTIONS"] = "MOCK"
     internal_service_token: SecretStr = Field(min_length=24)
 
 
