@@ -71,6 +71,8 @@ public class SecurityConfiguration {
                                         "/api/v1/projects/*/conversations",
                                         "/api/v1/projects/*/conversations/*/outline",
                                         "/api/v1/projects/*/stages/*/turns",
+                                        "/api/v1/projects/*/stages/*/context-indicator",
+                                        "/api/v1/projects/*/conversations/*/stages/*/context-indicator",
                                         "/api/v1/ai/requests/*",
                                         "/api/v1/ai/requests/*/events")
                                 .authenticated();

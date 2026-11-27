@@ -19,10 +19,14 @@ from app.prompt_builder import (
     set_current_built_prompt,
 )
 from app.providers.base import AdapterStatus, ProviderAdapter
+from app.providers.error_mapper import ProviderExecutionError
 from app.providers.factory import get_provider
+from app.providers.gemini_client import (
+    reset_current_provider_credential,
+    set_current_provider_credential,
+)
 from app.providers.mock_adapter import (
     MockRequestContext,
-    MockScenarioFailure,
     reset_mock_request_context,
     set_mock_request_context,
 )
@@ -119,13 +123,16 @@ async def streams(
     iterator = None
     built_prompt = None
     prompt_token = None
+    cred_token = None
     mock_ctx = _mock_context_from_request(http_request, credential)
     mock_token = None
+    provider_mode = provider.status().mode
     dispatched: ProviderDispatched | None = None
     initial_failure: ProviderFailure | None = None
     try:
         built_prompt = prompt_builder.build(request.prompt)
         prompt_token = set_current_built_prompt(built_prompt)
+        cred_token = set_current_provider_credential(credential)
         mock_token = set_mock_request_context(mock_ctx)
         iterator = provider.stream(request)
         event, payload = await anext(iterator)
@@ -154,11 +161,17 @@ async def streams(
         )
         await close_stream(iterator)
         return failure_response(
-            502, "ADAPTER_UNAVAILABLE", request.model_dump(), category="UNKNOWN_REQUIRES_REVIEW"
+            502,
+            "ADAPTER_UNAVAILABLE",
+            request.model_dump(),
+            category="UNKNOWN_REQUIRES_REVIEW",
+            provider_mode=provider_mode,
         )
     finally:
         if mock_token is not None:
             reset_mock_request_context(mock_token)
+        if cred_token is not None:
+            reset_current_provider_credential(cred_token)
         if prompt_token is not None:
             reset_current_built_prompt(prompt_token)
 
@@ -180,6 +193,7 @@ async def streams(
         assert built_prompt is not None
         assert dispatched is not None
         stream_prompt_token = set_current_built_prompt(built_prompt)
+        stream_cred_token = set_current_provider_credential(credential)
         stream_mock_token = set_mock_request_context(mock_ctx)
         try:
             if await http_request.is_disconnected():
@@ -224,11 +238,12 @@ async def streams(
             yield frame("provider.failed", failed)
         finally:
             reset_mock_request_context(stream_mock_token)
+            reset_current_provider_credential(stream_cred_token)
             reset_current_built_prompt(stream_prompt_token)
             await close_stream(iterator)
 
     return StreamingResponse(
-        events(), media_type="text/event-stream", headers={"X-Provider-Mode": "MOCK"}
+        events(), media_type="text/event-stream", headers={"X-Provider-Mode": provider_mode}
     )
 
 
@@ -241,19 +256,27 @@ def generate(
     response: Response,
     prompt_builder: Annotated[PromptBuilder, Depends(get_prompt_builder)],
 ) -> GenerateResult | JSONResponse:
+    provider_mode = provider.status().mode
     if request.response_schema is not None:
         try:
             Draft202012Validator.check_schema(request.response_schema)
         except SchemaError:
-            return failure_response(422, "INVALID_RESPONSE_SCHEMA", request.model_dump())
+            return failure_response(
+                422,
+                "INVALID_RESPONSE_SCHEMA",
+                request.model_dump(),
+                provider_mode=provider_mode,
+            )
     prompt_token = None
+    cred_token = None
     mock_token = None
     try:
         built_prompt = prompt_builder.build(request.prompt)
         prompt_token = set_current_built_prompt(built_prompt)
+        cred_token = set_current_provider_credential(credential)
         mock_token = set_mock_request_context(_mock_context_from_request(http_request, credential))
         result = provider.generate(request)
-    except MockScenarioFailure as exc:
+    except ProviderExecutionError as exc:
         return failure_response(
             502,
             exc.error_code,
@@ -263,15 +286,24 @@ def generate(
             category=exc.error_category,
             retryable=exc.retryable,
             retry_after_seconds=exc.retry_after_seconds,
+            usage_status=exc.usage_status,
+            usage=exc.usage,
+            provider_mode=provider_mode,
         )
     except Exception as exc:
         logger.warning("Internal generate failed exc_type=%s", type(exc).__name__)
         return failure_response(
-            502, "ADAPTER_UNAVAILABLE", request.model_dump(), category="UNKNOWN_REQUIRES_REVIEW"
+            502,
+            "ADAPTER_UNAVAILABLE",
+            request.model_dump(),
+            category="UNKNOWN_REQUIRES_REVIEW",
+            provider_mode=provider_mode,
         )
     finally:
         if mock_token is not None:
             reset_mock_request_context(mock_token)
+        if cred_token is not None:
+            reset_current_provider_credential(cred_token)
         if prompt_token is not None:
             reset_current_built_prompt(prompt_token)
     try:
@@ -287,8 +319,9 @@ def generate(
             request.model_dump(),
             dispatched=result.dispatched,
             occurred_at=result.occurred_at,
+            provider_mode=provider_mode,
         )
-    response.headers["X-Provider-Mode"] = "MOCK"
+    response.headers["X-Provider-Mode"] = provider_mode
     return result
 
 
@@ -300,10 +333,12 @@ def embeddings(
     credential: Credential,
     response: Response,
 ) -> EmbeddingResult | JSONResponse:
+    provider_mode = provider.status().mode
+    cred_token = set_current_provider_credential(credential)
     mock_token = set_mock_request_context(_mock_context_from_request(http_request, credential))
     try:
         result = provider.embeddings(request)
-    except MockScenarioFailure as exc:
+    except ProviderExecutionError as exc:
         return failure_response(
             502,
             exc.error_code,
@@ -313,14 +348,22 @@ def embeddings(
             category=exc.error_category,
             retryable=exc.retryable,
             retry_after_seconds=exc.retry_after_seconds,
+            usage_status=exc.usage_status,
+            usage=exc.usage,
+            provider_mode=provider_mode,
         )
     except Exception as exc:
         logger.warning("Internal embeddings failed exc_type=%s", type(exc).__name__)
         return failure_response(
-            502, "ADAPTER_UNAVAILABLE", request.model_dump(), category="UNKNOWN_REQUIRES_REVIEW"
+            502,
+            "ADAPTER_UNAVAILABLE",
+            request.model_dump(),
+            category="UNKNOWN_REQUIRES_REVIEW",
+            provider_mode=provider_mode,
         )
     finally:
         reset_mock_request_context(mock_token)
+        reset_current_provider_credential(cred_token)
     try:
         result = EmbeddingResult.model_validate(result.model_dump())
         if len(result.vectors) != len(request.texts):
@@ -332,8 +375,9 @@ def embeddings(
             request.model_dump(),
             dispatched=result.dispatched,
             occurred_at=result.occurred_at,
+            provider_mode=provider_mode,
         )
-    response.headers["X-Provider-Mode"] = "MOCK"
+    response.headers["X-Provider-Mode"] = provider_mode
     return result
 
 
@@ -345,14 +389,21 @@ def verify(
     credential: Credential,
     response: Response,
 ) -> VerifyResult | JSONResponse:
-    response.headers["X-Provider-Mode"] = "MOCK"
+    provider_mode = provider.status().mode
+    response.headers["X-Provider-Mode"] = provider_mode
+    cred_token = set_current_provider_credential(credential)
     mock_token = set_mock_request_context(_mock_context_from_request(http_request, credential))
     try:
         return provider.verify(request, credential)
     except Exception as exc:
         logger.warning("Internal credential verify failed exc_type=%s", type(exc).__name__)
         return failure_response(
-            502, "ADAPTER_UNAVAILABLE", request.model_dump(), category="UNKNOWN_REQUIRES_REVIEW"
+            502,
+            "ADAPTER_UNAVAILABLE",
+            request.model_dump(),
+            category="UNKNOWN_REQUIRES_REVIEW",
+            provider_mode=provider_mode,
         )
     finally:
         reset_mock_request_context(mock_token)
+        reset_current_provider_credential(cred_token)

@@ -1,0 +1,11 @@
+package com.contextflow.knowledge.dto;
+
+public enum ProviderErrorCategory {
+    TRANSIENT_RETRYABLE,
+    RATE_LIMIT_RETRYABLE,
+    HARD_QUOTA_BLOCKED,
+    CONFIGURATION_BLOCKED,
+    PERMANENT_INPUT_ERROR,
+    SOURCE_INVALIDATED,
+    UNKNOWN_REQUIRES_REVIEW
+}
