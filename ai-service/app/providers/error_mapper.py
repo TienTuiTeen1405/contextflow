@@ -82,6 +82,23 @@ class SourceInvalidatedError(ValueError):
         super().__init__(redact_text(message))
 
 
+class ProviderStreamEventError(Exception):
+    """Structured error payload received inside an upstream SSE stream event."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        status_code: int | None = None,
+        status_label: str = "",
+        details: object = None,
+    ) -> None:
+        super().__init__(redact_text(message))
+        self.status_code = status_code
+        self.status_label = status_label
+        self.details = details
+
+
 class ProviderExecutionError(Exception):
     """Normalized provider failure raised from synchronous adapter execution."""
 
@@ -281,6 +298,12 @@ def _extract_error_context(
         resp = getattr(exc, "response", None)
         if resp is not None and hasattr(resp, "headers"):
             headers = resp.headers
+    elif isinstance(exc, ProviderStreamEventError):
+        status_code = exc.status_code
+        status_label = exc.status_label
+        details = exc.details
+        if details is not None:
+            text_parts.append(str(details))
     elif hasattr(exc, "status_code"):
         raw_status = getattr(exc, "status_code", None)
         if isinstance(raw_status, int):

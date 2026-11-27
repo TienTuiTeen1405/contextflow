@@ -18,7 +18,9 @@ from app.prompt_builder import (
 )
 from app.providers.base import AdapterStatus
 from app.providers.error_mapper import (
+    AdapterOutputValidationError,
     ProviderExecutionError,
+    ProviderStreamEventError,
     map_provider_exception,
     map_provider_usage,
     map_verify_exception,
@@ -44,8 +46,6 @@ from app.schemas.contracts import (
     ProviderDispatched,
     ProviderFailure,
     StreamInput,
-    Usage,
-    UsageStatus,
     VerifyInput,
     VerifyResult,
 )
@@ -105,28 +105,130 @@ def _extract_model_output_text(steps: list[NativeStep]) -> str:
     return "".join(parts)
 
 
+_STREAM_ERROR_LABEL_ALIASES: dict[str, str] = {
+    "SERVICE_UNAVAILABLE": "UNAVAILABLE",
+    "INTERNAL_ERROR": "INTERNAL",
+    "SERVER_ERROR": "INTERNAL",
+    "TIMEOUT": "DEADLINE_EXCEEDED",
+    "REQUEST_TIMEOUT": "DEADLINE_EXCEEDED",
+    "RATE_LIMIT_EXCEEDED": "RESOURCE_EXHAUSTED",
+    "TOO_MANY_REQUESTS": "RESOURCE_EXHAUSTED",
+}
+
+
+def _build_stream_event_error(event: object, default_message: str) -> ProviderStreamEventError:
+    err_obj = _read_field(event, "error")
+    raw_code = _read_field(err_obj, "code") if err_obj is not None else None
+    if raw_code is None:
+        raw_code = _read_field(event, "code")
+    raw_status = _read_field(err_obj, "status") if err_obj is not None else None
+    if raw_status is None:
+        raw_status = _read_field(event, "status")
+    raw_message = _read_field(err_obj, "message") if err_obj is not None else None
+    if raw_message is None:
+        raw_message = _read_field(event, "message")
+
+    status_code: int | None = None
+    status_label = ""
+
+    if isinstance(raw_code, int) and not isinstance(raw_code, bool):
+        status_code = raw_code
+    elif isinstance(raw_code, str) and raw_code.strip():
+        stripped = raw_code.strip()
+        if stripped.isdigit():
+            status_code = int(stripped)
+        else:
+            normalized = stripped.upper()
+            status_label = _STREAM_ERROR_LABEL_ALIASES.get(normalized, normalized)
+
+    if isinstance(raw_status, str) and raw_status.strip():
+        normalized_status = raw_status.strip().upper()
+        status_label = _STREAM_ERROR_LABEL_ALIASES.get(normalized_status, normalized_status)
+
+    details: object = None
+    if err_obj is not None:
+        if hasattr(err_obj, "model_dump"):
+            details = err_obj.model_dump(mode="json", exclude_none=True)
+        elif isinstance(err_obj, Mapping):
+            details = copy.deepcopy(dict(err_obj))
+        else:
+            details = str(err_obj)
+
+    message = (
+        str(raw_message)
+        if isinstance(raw_message, str) and raw_message.strip()
+        else default_message
+    )
+    return ProviderStreamEventError(
+        message,
+        status_code=status_code,
+        status_label=status_label,
+        details=details,
+    )
+
+
+def _merge_text_delta_into_blocks(
+    existing_blocks: object, delta_text: str, *, field_name: str
+) -> list[JsonValue]:
+    if existing_blocks is None:
+        return [{"type": "text", "text": delta_text}]
+    if not isinstance(existing_blocks, list):
+        raise AdapterOutputValidationError(
+            "INVALID_ADAPTER_OUTPUT",
+            f"Cannot reconstruct opaque stream step: non-list {field_name} field",
+        )
+    merged: list[JsonValue] = copy.deepcopy(existing_blocks)
+    for block in reversed(merged):
+        if isinstance(block, dict) and block.get("type") == "text":
+            prior_text = block.get("text")
+            prefix = prior_text if isinstance(prior_text, str) else ""
+            block["text"] = f"{prefix}{delta_text}"
+            return merged
+    merged.append({"type": "text", "text": delta_text})
+    return merged
+
+
 def _reconstruct_stream_steps(
     completed_interaction: object,
     started_steps: dict[int, dict[str, Any]],
     text_deltas: dict[int, list[str]],
     thought_deltas: dict[int, list[str]],
     thought_signatures: dict[int, str],
+    *,
+    unreconstructable_steps: set[int] | None = None,
 ) -> list[NativeStep]:
     raw_steps = _read_field(completed_interaction, "steps")
     if isinstance(raw_steps, list) and raw_steps:
         return [_dump_step_opaque(step) for step in raw_steps]
+
+    delta_indices = set(text_deltas) | set(thought_deltas) | set(thought_signatures)
+    missing_step_starts = delta_indices - set(started_steps)
+    if unreconstructable_steps or missing_step_starts:
+        raise AdapterOutputValidationError(
+            "INVALID_ADAPTER_OUTPUT",
+            "Completed interaction omitted native steps and opaque stream deltas cannot be "
+            "reconstructed losslessly",
+        )
 
     reconstructed: list[NativeStep] = []
     for index in sorted(started_steps):
         step: NativeStep = copy.deepcopy(started_steps[index])
         step_type = step.get("type")
         if step_type == "model_output" and index in text_deltas:
-            step["content"] = [{"type": "text", "text": "".join(text_deltas[index])}]
+            step["content"] = _merge_text_delta_into_blocks(
+                step.get("content"),
+                "".join(text_deltas[index]),
+                field_name="content",
+            )
         elif step_type == "thought":
             if index in thought_signatures:
                 step["signature"] = thought_signatures[index]
             if index in thought_deltas:
-                step["summary"] = [{"type": "text", "text": "".join(thought_deltas[index])}]
+                step["summary"] = _merge_text_delta_into_blocks(
+                    step.get("summary"),
+                    "".join(thought_deltas[index]),
+                    field_name="summary",
+                )
         reconstructed.append(step)
     return reconstructed
 
@@ -135,41 +237,6 @@ def _format_embedding_text(task_type: EmbeddingTask, text: str) -> str:
     if task_type == "QUERY_EMBEDDING":
         return f"task: search result | query: {text}"
     return f"title: none | text: {text}"
-
-
-def _aggregate_embedding_usage(
-    usages: list[tuple[UsageStatus, Usage]],
-) -> tuple[UsageStatus, Usage]:
-    if not usages:
-        return "UNAVAILABLE", unavailable_usage()
-    if len(usages) == 1:
-        return usages[0]
-
-    def sum_or_none(attr: str) -> int | None:
-        vals = [getattr(usage, attr) for _, usage in usages]
-        if all(isinstance(v, int) for v in vals):
-            return sum(int(v) for v in vals if v is not None)
-        return None
-
-    combined = Usage(
-        input_tokens=sum_or_none("input_tokens"),
-        output_tokens=sum_or_none("output_tokens"),
-        total_tokens=sum_or_none("total_tokens"),
-        cached_tokens=sum_or_none("cached_tokens"),
-        reasoning_tokens=sum_or_none("reasoning_tokens"),
-    )
-    fields = (
-        combined.input_tokens,
-        combined.output_tokens,
-        combined.total_tokens,
-        combined.cached_tokens,
-        combined.reasoning_tokens,
-    )
-    if all(v is None for v in fields):
-        return "UNAVAILABLE", combined
-    if all(v is not None for v in fields):
-        return "AVAILABLE", combined
-    return "PARTIAL", combined
 
 
 async def _close_raw_stream(raw_stream: object) -> None:
@@ -265,6 +332,7 @@ class GeminiInteractionsAdapter:
         text_deltas: dict[int, list[str]] = {}
         thought_deltas: dict[int, list[str]] = {}
         thought_signatures: dict[int, str] = {}
+        unreconstructable_steps: set[int] = set()
         emitted_chunks: list[str] = []
         completed_interaction: object = None
 
@@ -278,6 +346,11 @@ class GeminiInteractionsAdapter:
                 raw_stream = await client.aio.interactions.create(**body)
                 async for event in raw_stream:
                     etype = str(_read_field(event, "event_type") or "")
+                    if etype == "error":
+                        raise _build_stream_event_error(
+                            event, "Provider emitted stream error event"
+                        )
+
                     if etype == "interaction.created":
                         created_obj = _read_field(event, "interaction")
                         raw_id = _read_field(created_obj, "id")
@@ -299,11 +372,13 @@ class GeminiInteractionsAdapter:
                     if etype == "interaction.status_update":
                         status_val = str(_read_field(event, "status") or "").lower()
                         if status_val in {"failed", "cancelled"}:
-                            raise RuntimeError(f"Interaction ended with status={status_val}")
+                            raise _build_stream_event_error(
+                                event, f"Interaction ended with status={status_val}"
+                            )
                         continue
 
                     if etype == "interaction.cancelled":
-                        raise RuntimeError("Interaction cancelled by provider")
+                        raise _build_stream_event_error(event, "Interaction cancelled by provider")
 
                     if not dispatched_sent:
                         occurred_at = datetime.now(UTC)
@@ -330,15 +405,21 @@ class GeminiInteractionsAdapter:
                                 emitted_chunks.append(chunk)
                                 text_deltas.setdefault(idx, []).append(chunk)
                                 yield "assistant.delta", AssistantDelta(**trace, text=chunk)
+                            if _read_field(delta, "annotations") is not None:
+                                unreconstructable_steps.add(idx)
                         elif dtype == "thought_summary":
                             content = _read_field(delta, "content")
                             t_val = _read_field(content, "text")
                             if isinstance(t_val, str) and t_val:
                                 thought_deltas.setdefault(idx, []).append(t_val)
+                            elif content is not None:
+                                unreconstructable_steps.add(idx)
                         elif dtype == "thought_signature":
                             sig = _read_field(delta, "signature")
                             if isinstance(sig, str) and sig:
                                 thought_signatures[idx] = sig
+                        elif dtype is not None:
+                            unreconstructable_steps.add(idx)
                     elif etype == "interaction.completed":
                         completed_interaction = _read_field(event, "interaction")
                         break
@@ -352,6 +433,7 @@ class GeminiInteractionsAdapter:
                     text_deltas,
                     thought_deltas,
                     thought_signatures,
+                    unreconstructable_steps=unreconstructable_steps,
                 )
                 assistant_text = "".join(emitted_chunks)
                 if not assistant_text:
@@ -444,7 +526,6 @@ class GeminiInteractionsAdapter:
             }
         if request.response_schema is not None:
             body["response_format"] = request.response_schema
-            body["response_mime_type"] = "application/json"
 
         occurred_at = datetime.now(UTC)
         with request_scoped_gemini_client(
@@ -532,8 +613,10 @@ class GeminiInteractionsAdapter:
             )
 
         occurred_at = datetime.now(UTC)
-        raw_vectors: list[list[object]] = []
-        usage_items: list[tuple[UsageStatus, Usage]] = []
+        formatted_contents: list[types.Content] = [
+            types.Content(parts=[types.Part(text=_format_embedding_text(request.task_type, text))])
+            for text in request.texts
+        ]
 
         with request_scoped_gemini_client(
             credential,
@@ -541,45 +624,34 @@ class GeminiInteractionsAdapter:
             timeout_seconds=DEFAULT_EMBEDDING_TIMEOUT_SECONDS,
             api_version=self._api_version,
         ) as client:
-            for item_index, text in enumerate(request.texts):
-                formatted = _format_embedding_text(request.task_type, text)
-                try:
-                    resp = client.models.embed_content(
-                        model=request.model,
-                        contents=formatted,
-                        config=types.EmbedContentConfig(
-                            output_dimensionality=request.output_dimensionality
-                        ),
-                    )
-                except Exception as exc:
-                    mapped = map_provider_exception(exc)
-                    dispatched = item_index > 0 or mapped.error_category not in {
-                        "CONFIGURATION_BLOCKED",
-                        "PERMANENT_INPUT_ERROR",
-                    }
-                    raise ProviderExecutionError(
-                        error_code=mapped.error_code,
-                        error_category=mapped.error_category,
-                        dispatched=dispatched,
-                        occurred_at=occurred_at if dispatched else None,
-                        retryable=mapped.retryable,
-                        retry_after_seconds=mapped.retry_after_seconds,
-                    ) from exc
+            try:
+                resp = client.models.embed_content(
+                    model=request.model,
+                    contents=formatted_contents,
+                    config=types.EmbedContentConfig(
+                        output_dimensionality=request.output_dimensionality
+                    ),
+                )
+            except Exception as exc:
+                mapped = map_provider_exception(exc)
+                dispatched = mapped.error_category not in {
+                    "CONFIGURATION_BLOCKED",
+                    "PERMANENT_INPUT_ERROR",
+                }
+                raise ProviderExecutionError(
+                    error_code=mapped.error_code,
+                    error_category=mapped.error_category,
+                    dispatched=dispatched,
+                    occurred_at=occurred_at if dispatched else None,
+                    retryable=mapped.retryable,
+                    retry_after_seconds=mapped.retry_after_seconds,
+                ) from exc
 
-                embeddings_list = _read_field(resp, "embeddings") or []
-                if len(embeddings_list) != 1:
-                    raise ProviderExecutionError(
-                        error_code="INVALID_ADAPTER_OUTPUT",
-                        error_category="PERMANENT_INPUT_ERROR",
-                        dispatched=True,
-                        occurred_at=occurred_at,
-                        retryable=False,
-                    )
-                values = list(_read_field(embeddings_list[0], "values") or [])
-                raw_vectors.append(values)
-                usage_items.append(map_provider_usage(_read_field(resp, "usage_metadata")))
-
-        usage_status, usage = _aggregate_embedding_usage(usage_items)
+        embeddings_list = _read_field(resp, "embeddings") or []
+        raw_vectors: list[list[object]] = [
+            list(_read_field(item, "values") or []) for item in embeddings_list
+        ]
+        usage_status, usage = map_provider_usage(_read_field(resp, "usage_metadata"))
         try:
             validated_vectors = validate_embedding_vectors(
                 raw_vectors,
