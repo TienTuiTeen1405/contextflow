@@ -63,7 +63,7 @@ def test_request_scoped_sync_client_closes_in_finally_even_on_error() -> None:
         return FakeSyncClient(cred.get_secret_value())
 
     with request_scoped_gemini_client(SecretStr("key-one"), factory=fake_factory) as c1:
-        assert c1.key == "key-one"  # type: ignore[attr-defined]
+        assert c1.key == "key-one"
 
     with pytest.raises(RuntimeError, match="boom"):
         with request_scoped_gemini_client(SecretStr("key-two"), factory=fake_factory):
@@ -95,7 +95,7 @@ async def test_request_scoped_async_client_closes_aio_and_sync_in_finally() -> N
         async with async_request_scoped_gemini_client(
             SecretStr("key-async"), factory=fake_factory
         ) as client:
-            assert client.key == "key-async"  # type: ignore[attr-defined]
+            assert client.key == "key-async"
             raise ValueError("stream failed")
 
     assert events == ["aio.aclose", "client.close"]

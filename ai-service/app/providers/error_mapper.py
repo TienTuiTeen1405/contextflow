@@ -82,6 +82,32 @@ class SourceInvalidatedError(ValueError):
         super().__init__(redact_text(message))
 
 
+class ProviderExecutionError(Exception):
+    """Normalized provider failure raised from synchronous adapter execution."""
+
+    def __init__(
+        self,
+        *,
+        error_code: str,
+        error_category: ErrorCategory,
+        dispatched: bool,
+        occurred_at: datetime | None,
+        retryable: bool,
+        retry_after_seconds: int | None = None,
+        usage_status: UsageStatus = "UNAVAILABLE",
+        usage: Usage | None = None,
+    ) -> None:
+        super().__init__(error_code)
+        self.error_code = error_code
+        self.error_category = error_category
+        self.dispatched = dispatched
+        self.occurred_at = occurred_at
+        self.retryable = retryable
+        self.retry_after_seconds = retry_after_seconds
+        self.usage_status = usage_status
+        self.usage = usage or unavailable_usage()
+
+
 @dataclass(frozen=True)
 class MappedProviderError:
     """Normalized internal failure attributes adhering to CF-DEC-042."""

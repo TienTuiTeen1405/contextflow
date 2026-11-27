@@ -2,12 +2,33 @@
 
 from collections.abc import AsyncIterator, Callable, Iterator
 from contextlib import asynccontextmanager, contextmanager
+from contextvars import ContextVar, Token
+from typing import Any
 
 from google import genai
 from google.genai import types
 from pydantic import SecretStr
 
-GeminiClientBuilder = Callable[..., genai.Client]
+GeminiClientBuilder = Callable[..., Any]
+
+_CURRENT_PROVIDER_CREDENTIAL: ContextVar[SecretStr | None] = ContextVar(
+    "current_provider_credential", default=None
+)
+
+
+def set_current_provider_credential(credential: SecretStr) -> Token[SecretStr | None]:
+    """Bind the incoming request X-Provider-Credential for the current async execution."""
+    return _CURRENT_PROVIDER_CREDENTIAL.set(credential)
+
+
+def get_current_provider_credential() -> SecretStr | None:
+    """Return the active request X-Provider-Credential without persisting it."""
+    return _CURRENT_PROVIDER_CREDENTIAL.get()
+
+
+def reset_current_provider_credential(token: Token[SecretStr | None]) -> None:
+    """Clear the request-scoped provider credential ContextVar."""
+    _CURRENT_PROVIDER_CREDENTIAL.reset(token)
 
 
 def create_gemini_client(
@@ -53,7 +74,7 @@ def request_scoped_gemini_client(
     factory: GeminiClientBuilder = create_gemini_client,
     timeout_seconds: float | None = None,
     api_version: str | None = None,
-) -> Iterator[genai.Client]:
+) -> Iterator[Any]:
     """Yield a synchronous request-scoped Gemini client and close it in finally."""
     client = factory(credential, timeout_seconds=timeout_seconds, api_version=api_version)
     try:
@@ -69,7 +90,7 @@ async def async_request_scoped_gemini_client(
     factory: GeminiClientBuilder = create_gemini_client,
     timeout_seconds: float | None = None,
     api_version: str | None = None,
-) -> AsyncIterator[genai.Client]:
+) -> AsyncIterator[Any]:
     """Yield an async-capable request-scoped Gemini client and close it in finally."""
     client = factory(credential, timeout_seconds=timeout_seconds, api_version=api_version)
     try:

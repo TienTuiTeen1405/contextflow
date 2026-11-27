@@ -12,7 +12,6 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from app.api.internal.errors import failure_response
 from app.config import get_settings
 
 REDACTED = "[REDACTED]"
@@ -239,6 +238,8 @@ class RedactionMiddleware:
 
 async def unhandled_error(_: Request, __: Exception) -> JSONResponse:
     """Safe fallback handler for unhandled server exceptions without leaking details."""
+    from app.api.internal.errors import failure_response
+
     return failure_response(
         502,
         "ADAPTER_UNAVAILABLE",
