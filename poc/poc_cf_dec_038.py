@@ -22,6 +22,7 @@ import re
 import sys
 import time
 from collections.abc import Callable, Iterable
+from contextlib import ExitStack
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -33,6 +34,7 @@ from google.genai import _interactions_errors as genai_interactions_errors
 from google.genai import errors as genai_errors
 from google.genai import types
 
+# Approved PoC scope: gemini-3.5-flash-lite (user decision, 2026-11-27).
 DEFAULT_TEXT_MODEL = "gemini-3.5-flash-lite"
 DEFAULT_EMBEDDING_MODEL = "gemini-embedding-2"
 DEFAULT_REPORT_PATH = Path(__file__).resolve().parent / "CF-DEC-038-REPORT.md"
@@ -104,8 +106,8 @@ class SecretRedactor:
 class PoCConfig:
     """Resolved runtime configuration for PoC execution."""
 
-    key_a: str
-    key_b: str
+    key_a: str = field(repr=False)
+    key_b: str = field(repr=False)
     text_model: str = DEFAULT_TEXT_MODEL
     embedding_model: str = DEFAULT_EMBEDDING_MODEL
 
@@ -135,8 +137,32 @@ class PoCRunResult:
     t2b_cross_key_accepted: bool | None
 
     @property
+    def checks_passed(self) -> bool:
+        expected_ids = {f"Test {index}" for index in range(1, 6)}
+        return (
+            len(self.tests) == 5
+            and {item.test_id for item in self.tests} == expected_ids
+            and all(item.passed for item in self.tests)
+        )
+
+    @property
+    def gate_blockers(self) -> list[str]:
+        blockers = []
+        if not self.checks_passed:
+            blockers.append("All five mandatory checks must pass.")
+        if self.t2b_cross_key_accepted is None:
+            blockers.append("T2B is inconclusive; no epoch policy can be inferred.")
+        if self.mode != "LIVE":
+            blockers.append("Offline checks do not certify the LIVE PoC gate.")
+        if self.text_model != DEFAULT_TEXT_MODEL:
+            blockers.append(f"The approved text model is {DEFAULT_TEXT_MODEL}.")
+        if self.embedding_model != DEFAULT_EMBEDDING_MODEL:
+            blockers.append(f"The approved embedding model is {DEFAULT_EMBEDDING_MODEL}.")
+        return blockers
+
+    @property
     def gate_decision(self) -> str:
-        return "PASS" if all(item.passed for item in self.tests) else "BLOCKER"
+        return "BLOCKER" if self.gate_blockers else "PASS"
 
 
 def _is_usable_secret(value: str | None) -> bool:
@@ -300,6 +326,98 @@ def _extract_interaction_text(steps: list[dict[str, Any]]) -> str:
     return "".join(parts)
 
 
+def _is_signature_rejection(exc: Exception) -> bool:
+    """Only an explicit Provider input error can establish signature incompatibility."""
+    if not isinstance(exc, genai_errors.APIError | genai_interactions_errors.APIError):
+        return False
+    status = getattr(exc, "status_code", None) or getattr(exc, "code", None)
+    message = str(getattr(exc, "message", None) or exc).lower().replace("_", " ")
+    return (
+        status in (400, 422)
+        and "thought signature" in message
+        and any(
+            marker in message
+            for marker in (
+                "invalid",
+                "not valid",
+                "mismatch",
+                "does not match",
+                "belongs to",
+                "bound to",
+                "different key",
+                "different project",
+                "not compatible",
+            )
+        )
+    )
+
+
+def _check_t2b(
+    config: PoCConfig,
+    client_b: Any,
+    replay_payload: list[dict[str, Any]],
+    *,
+    has_thought_signature: bool,
+    same_key_replay_succeeded: bool,
+    memory_token: str,
+    redactor: SecretRedactor,
+) -> tuple[PoCTestResult, bool | None]:
+    metrics: dict[str, Any] = {
+        "cross_key_accepted": None,
+        "has_thought_signature": has_thought_signature,
+        "epoch_invalidation_required": None,
+        "outcome": "INCONCLUSIVE",
+    }
+    result = PoCTestResult(
+        test_id="Test 4",
+        name="Key Rotation T2B (Cross-Key Replay)",
+        passed=False,
+        summary="T2B inconclusive: requires signature-bearing steps and successful Key A replay.",
+        metrics=metrics,
+    )
+    if not has_thought_signature or not same_key_replay_succeeded:
+        return result, None
+
+    try:
+        turn_b = client_b.interactions.create(
+            model=config.text_model,
+            input=replay_payload,
+            store=False,
+            stream=False,
+        )
+        turn_b_steps = [_dump_obj(s) for s in (_extract_attr_or_key(turn_b, "steps") or [])]
+        turn_b_text = str(
+            _extract_attr_or_key(turn_b, "output_text") or _extract_interaction_text(turn_b_steps)
+        )
+        result.evidence = redactor.scrub_value({"turn_b_output_preview": turn_b_text[:240]})
+        recalled = memory_token in turn_b_text
+        metrics["recalled_token"] = recalled
+        if not recalled:
+            result.summary = "T2B inconclusive: Key B did not recall the replayed token."
+            return result, None
+        result.passed = True
+        result.summary = "Key B accepted Key A signature-bearing steps and recalled the token."
+        metrics.update(
+            cross_key_accepted=True, epoch_invalidation_required=False, outcome="ACCEPTED"
+        )
+        return result, True
+    except _POC_EXECUTION_ERRORS as exc:
+        result.evidence = redactor.scrub_value({"error": f"{type(exc).__name__}: {exc}"})
+        if _is_signature_rejection(exc):
+            result.passed = True
+            result.summary = "Provider explicitly rejected Key A thought signature under Key B."
+            metrics.update(
+                cross_key_accepted=False,
+                epoch_invalidation_required=True,
+                outcome="SIGNATURE_REJECTED",
+            )
+            return result, False
+        result.summary = redactor.scrub_text(
+            f"T2B inconclusive ({type(exc).__name__}); retry after resolving the Provider error."
+        )
+        return result, None
+
+
 def run_poc(
     config: PoCConfig,
     *,
@@ -307,9 +425,20 @@ def run_poc(
     mode: str = "LIVE",
 ) -> PoCRunResult:
     """Execute all 5 mandatory CF-DEC-038 PoC tests and return redacted results."""
+    if config.key_a.strip() == config.key_b.strip():
+        raise ValueError("GEMINI_KEY_A and GEMINI_KEY_B must be different for T2B.")
+    with ExitStack() as clients:
+        client_a = client_factory(config.key_a)
+        if callable(getattr(client_a, "close", None)):
+            clients.callback(client_a.close)
+        client_b = client_factory(config.key_b)
+        if callable(getattr(client_b, "close", None)):
+            clients.callback(client_b.close)
+        return _run_poc_checks(config, client_a, client_b, mode=mode)
+
+
+def _run_poc_checks(config: PoCConfig, client_a: Any, client_b: Any, *, mode: str) -> PoCRunResult:
     redactor = SecretRedactor([config.key_a, config.key_b])
-    client_a = client_factory(config.key_a)
-    client_b = client_factory(config.key_b)
     sdk_version = getattr(genai, "__version__", "unknown")
     executed_at = datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
@@ -347,6 +476,8 @@ def run_poc(
         for event in stream:
             etype = str(_extract_attr_or_key(event, "event_type") or "")
             event_types.append(etype)
+            if etype == "error":
+                raise RuntimeError("Provider emitted a stream error before completion")
             if etype == "step.start":
                 idx = int(_extract_attr_or_key(event, "index") or 0)
                 started_steps[idx] = _dump_obj(_extract_attr_or_key(event, "step")) or {}
@@ -453,22 +584,7 @@ def run_poc(
         )
     )
 
-    # Ensure Turn 1 has native steps even if streaming omitted them (fallback non-stream check)
-    if not turn1_steps:
-        try:
-            turn1_nonstream = client_a.interactions.create(
-                model=config.text_model,
-                input=turn1_prompt,
-                generation_config={"thinking_level": "medium"},
-                store=False,
-                stream=False,
-            )
-            turn1_steps = [
-                _dump_obj(s) for s in (_extract_attr_or_key(turn1_nonstream, "steps") or [])
-            ]
-        except _POC_EXECUTION_ERRORS:
-            turn1_steps = []
-
+    # Replay only steps from the completed stream being verified, never a new generation.
     if turn1_steps and turn1_steps[0].get("type") != "user_input":
         turn1_steps = [
             {"type": "user_input", "content": [{"type": "text", "text": turn1_prompt}]},
@@ -497,6 +613,8 @@ def run_poc(
         },
     ]
     try:
+        if not tests[0].passed or not turn1_steps:
+            raise ValueError("Streaming did not provide a completed native replay payload")
         turn2 = client_a.interactions.create(
             model=config.text_model,
             input=replay_payload,
@@ -544,56 +662,16 @@ def run_poc(
         )
 
     # Test 4: Key Rotation T2B (Key A steps -> Key B replay)
-    t2b_accepted: bool | None = None
-    try:
-        turn_b = client_b.interactions.create(
-            model=config.text_model,
-            input=replay_payload,
-            store=False,
-            stream=False,
-        )
-        turn_b_steps = [_dump_obj(s) for s in (_extract_attr_or_key(turn_b, "steps") or [])]
-        turn_b_text = str(
-            _extract_attr_or_key(turn_b, "output_text") or _extract_interaction_text(turn_b_steps)
-        )
-        t2b_accepted = memory_token in turn_b_text
-        tests.append(
-            PoCTestResult(
-                test_id="Test 4",
-                name="Key Rotation T2B (Cross-Key Replay)",
-                passed=True,
-                summary=(
-                    f"Key B accepted Key A native_output_steps={t2b_accepted} "
-                    f"(has_thought_signature={has_thought_signature})."
-                ),
-                metrics={
-                    "cross_key_accepted": t2b_accepted,
-                    "has_thought_signature": has_thought_signature,
-                    "epoch_invalidation_required": not t2b_accepted,
-                },
-                evidence=redactor.scrub_value({"turn_b_output_preview": turn_b_text[:240]}),
-            )
-        )
-    except _POC_EXECUTION_ERRORS as exc:
-        # Cross-key thought_signature rejection is an expected empirical outcome for T2B.
-        t2b_accepted = False
-        tests.append(
-            PoCTestResult(
-                test_id="Test 4",
-                name="Key Rotation T2B (Cross-Key Replay)",
-                passed=bool(turn1_steps),
-                summary=redactor.scrub_text(
-                    f"Key B rejected Key A native steps ({type(exc).__name__}); "
-                    "epoch invalidation required on key rotation."
-                ),
-                metrics={
-                    "cross_key_accepted": False,
-                    "has_thought_signature": has_thought_signature,
-                    "epoch_invalidation_required": True,
-                },
-                evidence=redactor.scrub_value({"error": f"{type(exc).__name__}: {exc}"}),
-            )
-        )
+    t2b_result, t2b_accepted = _check_t2b(
+        config,
+        client_b,
+        replay_payload,
+        has_thought_signature=has_thought_signature,
+        same_key_replay_succeeded=tests[2].passed,
+        memory_token=memory_token,
+        redactor=redactor,
+    )
+    tests.append(t2b_result)
 
     # Test 5: 1536d Embedding with prompt prefix (no task_type field)
     sample_text = (
@@ -618,7 +696,9 @@ def run_poc(
                 test_id="Test 5",
                 name="Gemini Embedding 2 (1536d)",
                 passed=test5_pass,
-                summary=f"Vector count={len(embeddings)}, dim={len(values)}, all_finite={all_finite}.",
+                summary=(
+                    f"Vector count={len(embeddings)}, dim={len(values)}, all_finite={all_finite}."
+                ),
                 metrics={
                     "vector_count": len(embeddings),
                     "dimensions": len(values),
@@ -665,18 +745,31 @@ def render_markdown_report(result: PoCRunResult, redactor: SecretRedactor) -> st
         f"- **SDK (`google-genai`):** `{result.sdk_version}`",
         f"- **Text Model:** `{result.text_model}`",
         f"- **Embedding Model:** `{result.embedding_model}`",
-        "",
-        "## Summary Matrix",
-        "",
-        "| Test | Name | Result | Summary |",
-        "|---|---|---|---|",
     ]
+    if result.gate_blockers:
+        lines.extend(["", "## Gate Blockers", ""])
+        lines.extend(f"- {blocker}" for blocker in result.gate_blockers)
+    lines.extend(
+        [
+            "",
+            "## Summary Matrix",
+            "",
+            "| Test | Name | Result | Summary |",
+            "|---|---|---|---|",
+        ]
+    )
     for item in result.tests:
         status = "PASS" if item.passed else "FAIL"
         lines.append(f"| {item.test_id} | {item.name} | `{status}` | {item.summary} |")
 
     lines.extend(["", "## Architectural Recommendation for Core Lead", ""])
-    if result.t2b_cross_key_accepted:
+    if result.t2b_cross_key_accepted is None:
+        lines.append(
+            "- **T2B Key Rotation (`ContinuityEpoch`):** Inconclusive. Do not infer whether "
+            "rotation requires epoch invalidation; resolve the failed prerequisites or "
+            "Provider error and repeat the LIVE check with two different keys."
+        )
+    elif result.t2b_cross_key_accepted:
         lines.append(
             "- **T2B Key Rotation (`ContinuityEpoch`):** Cross-key replay with `GEMINI_KEY_B` "
             "succeeded (including `thought` signature replay); Core may preserve the active "
@@ -830,8 +923,9 @@ class _StubInteractions:
             if isinstance(step, dict) and step.get("type") == "thought":
                 sig = str(step.get("signature", ""))
                 if self.reject_cross_key and f"owner={self.api_key}" not in sig:
-                    raise RuntimeError(
-                        f"Cross-key thought_signature rejected for key={self.api_key}"
+                    raise genai_errors.ClientError(
+                        400,
+                        {"error": {"message": f"Invalid thought_signature for key={self.api_key}"}},
                     )
 
         recalled_text = "Exact token is CF-DEC-038-ANCHOR-749."
@@ -879,14 +973,17 @@ def run_self_test() -> int:
     redactor = SecretRedactor([fake_a, fake_b])
 
     for reject_cross_key in (True, False):
+
+        def stub_factory(key: str, reject: bool = reject_cross_key) -> StubGeminiClient:
+            return StubGeminiClient(key, reject_cross_key=reject)
+
         result = run_poc(
             cfg,
-            client_factory=lambda key, reject=reject_cross_key: StubGeminiClient(
-                key, reject_cross_key=reject
-            ),
+            client_factory=stub_factory,
             mode=f"OFFLINE_STUB_T2B_REJECT={reject_cross_key}",
         )
-        assert result.gate_decision == "PASS", f"Expected PASS, got {result}"
+        assert result.checks_passed, f"Expected all checks to pass, got {result}"
+        assert result.gate_decision == "BLOCKER", "Offline checks must not certify the LIVE gate"
         assert len(result.tests) == 5
         assert result.tests[1].metrics["cached_tokens"] is None
         assert result.tests[1].metrics["total_includes_reasoning"] is True
@@ -960,7 +1057,11 @@ def main(argv: list[str] | None = None) -> int:
         )
 
     redactor = SecretRedactor([config.key_a, config.key_b])
-    result = run_poc(config, mode="LIVE")
+    try:
+        result = run_poc(config, mode="LIVE")
+    except _POC_EXECUTION_ERRORS as exc:
+        print(redactor.scrub_text(f"BLOCKED: {type(exc).__name__}: {exc}"), file=sys.stderr)
+        return 2
     report_text = render_markdown_report(result, redactor)
     args.report_path.write_text(report_text, encoding="utf-8", newline="\n")
     print(f"Wrote PoC report to {args.report_path} (decision={result.gate_decision}).")

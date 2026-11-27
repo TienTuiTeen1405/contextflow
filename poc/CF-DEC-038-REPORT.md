@@ -2,20 +2,20 @@
 
 - **Decision:** `PASS`
 - **Execution Mode:** `LIVE`
-- **Executed At (UTC):** `2026-11-27T04:05:18.983568Z`
+- **Executed At (UTC):** `2026-11-27T09:21:59.506883Z`
 - **SDK (`google-genai`):** `3.6.1`
 - **Text Model:** `gemini-3.5-flash-lite`
 - **Embedding Model:** `gemini-embedding-2`
 
 ## Summary Matrix
 
-| Test   | Name                                   | Result | Summary                                                                     |
-| ------ | -------------------------------------- | ------ | --------------------------------------------------------------------------- |
-| Test 1 | Streaming & store=false                | `PASS` | Received 3 text deltas; TTFT=2149.17ms; completed=True.                     |
-| Test 2 | Completion & Usage Null Semantics      | `PASS` | usage present=True; total_includes_reasoning=True.                          |
-| Test 3 | Stateless Multi-Turn Native Continuity | `PASS` | Replayed 3 native steps (has_thought_signature=True); recalled_token=True.  |
-| Test 4 | Key Rotation T2B (Cross-Key Replay)    | `PASS` | Key B accepted Key A native_output_steps=True (has_thought_signature=True). |
-| Test 5 | Gemini Embedding 2 (1536d)             | `PASS` | Vector count=1, dim=1536, all_finite=True.                                  |
+| Test   | Name                                   | Result | Summary                                                                    |
+| ------ | -------------------------------------- | ------ | -------------------------------------------------------------------------- |
+| Test 1 | Streaming & store=false                | `PASS` | Received 2 text deltas; TTFT=4576.19ms; completed=True.                    |
+| Test 2 | Completion & Usage Null Semantics      | `PASS` | usage present=True; total_includes_reasoning=True.                         |
+| Test 3 | Stateless Multi-Turn Native Continuity | `PASS` | Replayed 3 native steps (has_thought_signature=True); recalled_token=True. |
+| Test 4 | Key Rotation T2B (Cross-Key Replay)    | `PASS` | Key B accepted Key A signature-bearing steps and recalled the token.       |
+| Test 5 | Gemini Embedding 2 (1536d)             | `PASS` | Vector count=1, dim=1536, all_finite=True.                                 |
 
 ## Architectural Recommendation for Core Lead
 
@@ -28,8 +28,8 @@
 ```json
 {
   "metrics": {
-    "ttft_ms": 2149.17,
-    "delta_count": 3,
+    "ttft_ms": 4576.19,
+    "delta_count": 2,
     "event_types_seen": [
       "interaction.completed",
       "interaction.created",
@@ -40,7 +40,7 @@
     ]
   },
   "evidence": {
-    "stream_text_preview": "Token CF-DEC-038-ANCHOR-749 acknowledged. 17 * 23 = 391. `store=false` means no data is persisted between requests.",
+    "stream_text_preview": "CF-DEC-038-ANCHOR-749 acknowledged. 17 * 23 = 391. `store=false` means no data persists between requests.",
     "step_types": ["thought", "model_output"]
   }
 }
@@ -52,10 +52,10 @@
 {
   "metrics": {
     "input_tokens": 54,
-    "output_tokens": 43,
-    "total_tokens": 365,
+    "output_tokens": 41,
+    "total_tokens": 375,
     "cached_tokens": 0,
-    "reasoning_tokens": 268,
+    "reasoning_tokens": 280,
     "total_includes_reasoning": true
   },
   "evidence": {
@@ -69,9 +69,9 @@
       ],
       "total_cached_tokens": 0,
       "total_input_tokens": 54,
-      "total_output_tokens": 43,
-      "total_thought_tokens": 268,
-      "total_tokens": 365,
+      "total_output_tokens": 41,
+      "total_thought_tokens": 280,
+      "total_tokens": 375,
       "total_tool_use_tokens": 0
     }
   }
@@ -101,7 +101,9 @@
   "metrics": {
     "cross_key_accepted": true,
     "has_thought_signature": true,
-    "epoch_invalidation_required": false
+    "epoch_invalidation_required": false,
+    "outcome": "ACCEPTED",
+    "recalled_token": true
   },
   "evidence": {
     "turn_b_output_preview": "CF-DEC-038-ANCHOR-749"
