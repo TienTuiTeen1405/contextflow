@@ -1,8 +1,10 @@
+import asyncio
 import json
+import logging
 from collections.abc import AsyncIterator
 from typing import Annotated, Any, Never
 
-from fastapi import APIRouter, Depends, Header, Response
+from fastapi import APIRouter, Depends, Header, Request, Response
 from fastapi.responses import JSONResponse, StreamingResponse
 from jsonschema import Draft202012Validator, SchemaError
 from pydantic import BaseModel, SecretStr
@@ -10,8 +12,20 @@ from referencing import Registry
 from referencing.exceptions import NoSuchResource
 
 from app.api.internal.errors import failure_payload, failure_response
+from app.prompt_builder import (
+    PromptBuilder,
+    get_prompt_builder,
+    reset_current_built_prompt,
+    set_current_built_prompt,
+)
 from app.providers.base import AdapterStatus, ProviderAdapter
 from app.providers.factory import get_provider
+from app.providers.mock_adapter import (
+    MockRequestContext,
+    MockScenarioFailure,
+    reset_mock_request_context,
+    set_mock_request_context,
+)
 from app.schemas.contracts import (
     INTERNAL_EVENTS,
     EmbeddingInput,
@@ -20,6 +34,7 @@ from app.schemas.contracts import (
     GenerateResult,
     InternalError,
     ProviderDispatched,
+    ProviderFailure,
     StreamInput,
     VerifyInput,
     VerifyResult,
@@ -29,6 +44,7 @@ from app.security.service_auth import require_service_auth
 router = APIRouter(
     prefix="/internal/v1/ai", tags=["internal-ai"], dependencies=[Depends(require_service_auth)]
 )
+logger = logging.getLogger(__name__)
 Provider = Annotated[ProviderAdapter, Depends(get_provider)]
 
 
@@ -65,6 +81,23 @@ ERRORS: dict[int | str, dict[str, Any]] = {
 }
 
 
+def _mock_context_from_request(http_request: Request, credential: SecretStr) -> MockRequestContext:
+    raw_delay = http_request.headers.get("X-Mock-Slow-Delay-Ms")
+    slow_delay_ms: int | None = None
+    if raw_delay is not None:
+        try:
+            parsed = int(raw_delay)
+            if 0 <= parsed <= 5000:
+                slow_delay_ms = parsed
+        except ValueError:
+            slow_delay_ms = None
+    return MockRequestContext(
+        scenario_header=http_request.headers.get("X-Mock-Scenario"),
+        credential_value=credential.get_secret_value(),
+        slow_delay_ms=slow_delay_ms,
+    )
+
+
 @router.get("/status", response_model=AdapterStatus, include_in_schema=False)
 def adapter_status(provider: Provider) -> AdapterStatus:
     return provider.status()
@@ -77,25 +110,57 @@ def adapter_status(provider: Provider) -> AdapterStatus:
     response_model=None,
 )
 async def streams(
-    request: StreamInput, provider: Provider, credential: Credential
+    http_request: Request,
+    request: StreamInput,
+    provider: Provider,
+    credential: Credential,
+    prompt_builder: Annotated[PromptBuilder, Depends(get_prompt_builder)],
 ) -> StreamingResponse | JSONResponse:
     iterator = None
+    built_prompt = None
+    prompt_token = None
+    mock_ctx = _mock_context_from_request(http_request, credential)
+    mock_token = None
+    dispatched: ProviderDispatched | None = None
+    initial_failure: ProviderFailure | None = None
     try:
+        built_prompt = prompt_builder.build(request.prompt)
+        prompt_token = set_current_built_prompt(built_prompt)
+        mock_token = set_mock_request_context(mock_ctx)
         iterator = provider.stream(request)
         event, payload = await anext(iterator)
-        if event != "provider.dispatched":
-            raise ValueError("Dispatch acknowledgement required")
-        dispatched = ProviderDispatched.model_validate(payload.model_dump())
-        if (
-            dispatched.correlation_id != request.correlation_id
-            or dispatched.provider_call_id != request.provider_call_id
-        ):
-            raise ValueError("Trace mismatch")
-    except Exception:
+        if event == "provider.dispatched":
+            dispatched = ProviderDispatched.model_validate(payload.model_dump())
+            if (
+                dispatched.correlation_id != request.correlation_id
+                or dispatched.provider_call_id != request.provider_call_id
+            ):
+                raise ValueError("Trace mismatch")
+        elif event == "provider.failed":
+            initial_failure = ProviderFailure.model_validate(payload.model_dump())
+            if (
+                initial_failure.correlation_id != request.correlation_id
+                or initial_failure.provider_call_id != request.provider_call_id
+            ):
+                raise ValueError("Trace mismatch")
+            if initial_failure.dispatched:
+                raise ValueError("Initial provider.failed must have dispatched=False")
+        else:
+            raise ValueError("Dispatch acknowledgement or undispatched failure required")
+    except Exception as exc:
+        logger.warning(
+            "Internal stream setup failed exc_type=%s",
+            type(exc).__name__,
+        )
         await close_stream(iterator)
         return failure_response(
             502, "ADAPTER_UNAVAILABLE", request.model_dump(), category="UNKNOWN_REQUIRES_REVIEW"
         )
+    finally:
+        if mock_token is not None:
+            reset_mock_request_context(mock_token)
+        if prompt_token is not None:
+            reset_current_built_prompt(prompt_token)
 
     def frame(event: str, payload: BaseModel) -> str:
         data = json.dumps(payload.model_dump(mode="json"), ensure_ascii=False, allow_nan=False)
@@ -103,9 +168,32 @@ async def streams(
 
     async def events() -> AsyncIterator[str]:
         assert iterator is not None
+        if initial_failure is not None:
+            try:
+                if await http_request.is_disconnected():
+                    return
+                yield frame("provider.failed", initial_failure)
+            finally:
+                await close_stream(iterator)
+            return
+
+        assert built_prompt is not None
+        assert dispatched is not None
+        stream_prompt_token = set_current_built_prompt(built_prompt)
+        stream_mock_token = set_mock_request_context(mock_ctx)
         try:
+            if await http_request.is_disconnected():
+                return
             yield frame("provider.dispatched", dispatched)
-            async for event, payload in iterator:
+            while True:
+                if await http_request.is_disconnected():
+                    return
+                try:
+                    event, payload = await anext(iterator)
+                except StopAsyncIteration:
+                    raise ValueError("Missing terminal event") from None
+                if await http_request.is_disconnected():
+                    return
                 if event == "provider.dispatched":
                     raise ValueError("Duplicate dispatch")
                 validated = INTERNAL_EVENTS[event].model_validate(payload.model_dump())
@@ -118,8 +206,13 @@ async def streams(
                 yield frame(event, validated)
                 if event in {"provider.completed", "provider.failed"}:
                     return
-            raise ValueError("Missing terminal event")
-        except Exception:
+        except asyncio.CancelledError:
+            return
+        except Exception as exc:
+            logger.warning(
+                "Internal stream failed mid-stream exc_type=%s",
+                type(exc).__name__,
+            )
             failed = failure_payload(
                 "PROVIDER_UNAVAILABLE",
                 request.model_dump(),
@@ -130,6 +223,8 @@ async def streams(
             )
             yield frame("provider.failed", failed)
         finally:
+            reset_mock_request_context(stream_mock_token)
+            reset_current_built_prompt(stream_prompt_token)
             await close_stream(iterator)
 
     return StreamingResponse(
@@ -139,19 +234,46 @@ async def streams(
 
 @router.post("/generate", response_model=GenerateResult, responses=ERRORS)
 def generate(
-    request: GenerateInput, provider: Provider, credential: Credential, response: Response
+    http_request: Request,
+    request: GenerateInput,
+    provider: Provider,
+    credential: Credential,
+    response: Response,
+    prompt_builder: Annotated[PromptBuilder, Depends(get_prompt_builder)],
 ) -> GenerateResult | JSONResponse:
     if request.response_schema is not None:
         try:
             Draft202012Validator.check_schema(request.response_schema)
         except SchemaError:
             return failure_response(422, "INVALID_RESPONSE_SCHEMA", request.model_dump())
+    prompt_token = None
+    mock_token = None
     try:
+        built_prompt = prompt_builder.build(request.prompt)
+        prompt_token = set_current_built_prompt(built_prompt)
+        mock_token = set_mock_request_context(_mock_context_from_request(http_request, credential))
         result = provider.generate(request)
-    except Exception:
+    except MockScenarioFailure as exc:
+        return failure_response(
+            502,
+            exc.error_code,
+            request.model_dump(),
+            dispatched=exc.dispatched,
+            occurred_at=exc.occurred_at,
+            category=exc.error_category,
+            retryable=exc.retryable,
+            retry_after_seconds=exc.retry_after_seconds,
+        )
+    except Exception as exc:
+        logger.warning("Internal generate failed exc_type=%s", type(exc).__name__)
         return failure_response(
             502, "ADAPTER_UNAVAILABLE", request.model_dump(), category="UNKNOWN_REQUIRES_REVIEW"
         )
+    finally:
+        if mock_token is not None:
+            reset_mock_request_context(mock_token)
+        if prompt_token is not None:
+            reset_current_built_prompt(prompt_token)
     try:
         result = GenerateResult.model_validate(result.model_dump())
         if request.response_schema is not None:
@@ -172,14 +294,33 @@ def generate(
 
 @router.post("/embeddings", response_model=EmbeddingResult, responses=ERRORS)
 def embeddings(
-    request: EmbeddingInput, provider: Provider, credential: Credential, response: Response
+    http_request: Request,
+    request: EmbeddingInput,
+    provider: Provider,
+    credential: Credential,
+    response: Response,
 ) -> EmbeddingResult | JSONResponse:
+    mock_token = set_mock_request_context(_mock_context_from_request(http_request, credential))
     try:
         result = provider.embeddings(request)
-    except Exception:
+    except MockScenarioFailure as exc:
+        return failure_response(
+            502,
+            exc.error_code,
+            request.model_dump(),
+            dispatched=exc.dispatched,
+            occurred_at=exc.occurred_at,
+            category=exc.error_category,
+            retryable=exc.retryable,
+            retry_after_seconds=exc.retry_after_seconds,
+        )
+    except Exception as exc:
+        logger.warning("Internal embeddings failed exc_type=%s", type(exc).__name__)
         return failure_response(
             502, "ADAPTER_UNAVAILABLE", request.model_dump(), category="UNKNOWN_REQUIRES_REVIEW"
         )
+    finally:
+        reset_mock_request_context(mock_token)
     try:
         result = EmbeddingResult.model_validate(result.model_dump())
         if len(result.vectors) != len(request.texts):
@@ -198,12 +339,20 @@ def embeddings(
 
 @router.post("/credentials/verify", response_model=VerifyResult, responses=ERRORS)
 def verify(
-    request: VerifyInput, provider: Provider, credential: Credential, response: Response
+    http_request: Request,
+    request: VerifyInput,
+    provider: Provider,
+    credential: Credential,
+    response: Response,
 ) -> VerifyResult | JSONResponse:
     response.headers["X-Provider-Mode"] = "MOCK"
+    mock_token = set_mock_request_context(_mock_context_from_request(http_request, credential))
     try:
         return provider.verify(request, credential)
-    except Exception:
+    except Exception as exc:
+        logger.warning("Internal credential verify failed exc_type=%s", type(exc).__name__)
         return failure_response(
             502, "ADAPTER_UNAVAILABLE", request.model_dump(), category="UNKNOWN_REQUIRES_REVIEW"
         )
+    finally:
+        reset_mock_request_context(mock_token)

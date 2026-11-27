@@ -10,10 +10,12 @@ from starlette.responses import Response
 from app.api.internal.errors import failure_response, http_error, validation_error
 from app.api.internal.router import router
 from app.config import get_settings
+from app.core.redaction import install_logging_redaction, install_redaction
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    install_logging_redaction()
     get_settings()
     yield
 
@@ -44,6 +46,9 @@ async def authenticate_before_body(
         if not secrets.compare_digest(supplied.encode(), expected.encode()):
             return failure_response(403, "SERVICE_AUTH_INVALID")
     return await call_next(request)
+
+
+install_redaction(app)
 
 
 @app.get("/health", include_in_schema=False)
