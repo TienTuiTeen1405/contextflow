@@ -9,13 +9,32 @@ from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
 from typing import Literal
 
-import httpx
 import httpx2
 from google.genai import _interactions_errors as genai_interactions_errors
 from google.genai import errors as genai_errors
 
 from app.core.redaction import redact_text
 from app.schemas.contracts import ErrorCategory, Usage, UsageStatus
+
+_OPTIONAL_HTTPX_ERRORS: tuple[type[BaseException], ...]
+try:
+    import httpx as _httpx
+
+    _OPTIONAL_HTTPX_ERRORS = (_httpx.TimeoutException, _httpx.TransportError)
+except ImportError:
+    _OPTIONAL_HTTPX_ERRORS = ()
+
+_TRANSPORT_OR_TIMEOUT_ERRORS: tuple[type[BaseException], ...] = (
+    TimeoutError,
+    asyncio.TimeoutError,
+    ConnectionError,
+    OSError,
+    genai_interactions_errors.APIConnectionError,
+    genai_interactions_errors.APITimeoutError,
+    httpx2.TimeoutException,
+    httpx2.TransportError,
+    *_OPTIONAL_HTTPX_ERRORS,
+)
 
 VerifyErrorCode = Literal["INVALID_API_KEY", "PERMISSION_DENIED", "PROVIDER_UNAVAILABLE"]
 
@@ -322,19 +341,7 @@ def _extract_error_context(
 
 
 def _is_transport_or_timeout_error(exc: BaseException) -> bool:
-    return isinstance(
-        exc,
-        TimeoutError
-        | asyncio.TimeoutError
-        | ConnectionError
-        | OSError
-        | genai_interactions_errors.APIConnectionError
-        | genai_interactions_errors.APITimeoutError
-        | httpx.TimeoutException
-        | httpx.TransportError
-        | httpx2.TimeoutException
-        | httpx2.TransportError,
-    )
+    return isinstance(exc, _TRANSPORT_OR_TIMEOUT_ERRORS)
 
 
 def map_provider_exception(exc: BaseException) -> MappedProviderError:
