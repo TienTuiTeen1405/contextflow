@@ -68,6 +68,11 @@ def test_write_report_fails_cleanly_when_keys_missing(
 ) -> None:
     monkeypatch.delenv("GEMINI_KEY_A", raising=False)
     monkeypatch.delenv("GEMINI_KEY_B", raising=False)
+    real_load_env = load_env_config
+    monkeypatch.setattr(
+        "poc.poc_cf_dec_038.load_env_config",
+        lambda repo_root=None: real_load_env(tmp_path),
+    )
     exit_code = main(["--write-report", "--report-path", str(tmp_path / "report.md")])
     captured = capsys.readouterr()
     assert exit_code == 2

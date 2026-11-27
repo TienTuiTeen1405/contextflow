@@ -29,22 +29,23 @@ from typing import Any
 
 from dotenv import dotenv_values
 from google import genai
+from google.genai import _interactions_errors as genai_interactions_errors
 from google.genai import errors as genai_errors
 from google.genai import types
 
+DEFAULT_TEXT_MODEL = "gemini-3.5-flash-lite"
+DEFAULT_EMBEDDING_MODEL = "gemini-embedding-2"
+DEFAULT_REPORT_PATH = Path(__file__).resolve().parent / "CF-DEC-038-REPORT.md"
+REDACTED = "[REDACTED]"
+
 _POC_EXECUTION_ERRORS = (
     genai_errors.APIError,
-    genai_errors.ContinuationInterruptedError,
+    genai_interactions_errors.GeminiNextGenAPIClientError,
     OSError,
     RuntimeError,
     TypeError,
     ValueError,
 )
-
-DEFAULT_TEXT_MODEL = "gemini-3.8-flash"
-DEFAULT_EMBEDDING_MODEL = "gemini-embedding-2"
-DEFAULT_REPORT_PATH = Path(__file__).resolve().parent / "CF-DEC-038-REPORT.md"
-REDACTED = "[REDACTED]"
 
 _PLACEHOLDER_PREFIXES = (
     "replace-with-",
@@ -327,16 +328,19 @@ def run_poc(
     thought_deltas: dict[int, list[str]] = {}
     thought_signatures: dict[int, str] = {}
 
+    turn1_prompt = (
+        f"Acknowledge token {memory_token}, compute 17 * 23, "
+        "and explain stateless store=false in one phrase."
+    )
+
     try:
         stream = client_a.interactions.create(
             model=config.text_model,
             system_instruction=(
                 "You are verifying ContextFlow stateless streaming. Keep replies brief and exact."
             ),
-            input=(
-                f"Acknowledge token {memory_token} in one short sentence "
-                "and explain stateless store=false in one phrase."
-            ),
+            input=turn1_prompt,
+            generation_config={"thinking_level": "medium"},
             store=False,
             stream=True,
         )
@@ -454,7 +458,8 @@ def run_poc(
         try:
             turn1_nonstream = client_a.interactions.create(
                 model=config.text_model,
-                input=f"Remember token {memory_token}. Reply with OK and the token.",
+                input=turn1_prompt,
+                generation_config={"thinking_level": "medium"},
                 store=False,
                 stream=False,
             )
@@ -463,6 +468,12 @@ def run_poc(
             ]
         except _POC_EXECUTION_ERRORS:
             turn1_steps = []
+
+    if turn1_steps and turn1_steps[0].get("type") != "user_input":
+        turn1_steps = [
+            {"type": "user_input", "content": [{"type": "text", "text": turn1_prompt}]},
+            *turn1_steps,
+        ]
 
     has_thought_signature = any(
         isinstance(step, dict) and step.get("type") == "thought" and bool(step.get("signature"))
@@ -668,9 +679,11 @@ def render_markdown_report(result: PoCRunResult, redactor: SecretRedactor) -> st
     if result.t2b_cross_key_accepted:
         lines.append(
             "- **T2B Key Rotation (`ContinuityEpoch`):** Cross-key replay with `GEMINI_KEY_B` "
-            "succeeded; Core may preserve the active `ContinuityEpoch` across compatible key "
-            "rotations while continuing to enforce `store=false` and strict model/interface "
-            "compatibility checks."
+            "succeeded (including `thought` signature replay); Core may preserve the active "
+            "`ContinuityEpoch` across compatible key rotations while continuing to enforce "
+            "`store=false`, model/API-interface compatibility checks, and an epoch-invalidation "
+            "fallback if an upstream key rotation spans projects/domains that reject a prior "
+            "signature."
         )
     else:
         lines.append(
@@ -908,6 +921,18 @@ def main(argv: list[str] | None = None) -> int:
         default=DEFAULT_REPORT_PATH,
         help="Target Markdown report path for --write-report.",
     )
+    parser.add_argument(
+        "--text-model",
+        type=str,
+        default=None,
+        help=f"Override text model ID (default: {DEFAULT_TEXT_MODEL}).",
+    )
+    parser.add_argument(
+        "--embedding-model",
+        type=str,
+        default=None,
+        help=f"Override embedding model ID (default: {DEFAULT_EMBEDDING_MODEL}).",
+    )
     args = parser.parse_args(argv)
 
     if args.self_test:
@@ -925,6 +950,14 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
         return 2
+
+    if args.text_model or args.embedding_model:
+        config = PoCConfig(
+            key_a=config.key_a,
+            key_b=config.key_b,
+            text_model=args.text_model or config.text_model,
+            embedding_model=args.embedding_model or config.embedding_model,
+        )
 
     redactor = SecretRedactor([config.key_a, config.key_b])
     result = run_poc(config, mode="LIVE")
