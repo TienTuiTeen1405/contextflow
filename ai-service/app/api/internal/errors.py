@@ -5,8 +5,25 @@ from fastapi import HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from app.providers.mock_adapter import unavailable_usage
-from app.schemas.contracts import ErrorCategory, InternalError, ProviderFailure
+from app.config import get_settings
+from app.schemas.contracts import ErrorCategory, InternalError, ProviderFailure, Usage, UsageStatus
+
+
+def _unavailable_usage() -> Usage:
+    return Usage(
+        input_tokens=None,
+        output_tokens=None,
+        total_tokens=None,
+        cached_tokens=None,
+        reasoning_tokens=None,
+    )
+
+
+def _provider_mode_header() -> str:
+    try:
+        return get_settings().provider_mode
+    except Exception:
+        return "MOCK"
 
 
 def failure_payload(
@@ -18,6 +35,8 @@ def failure_payload(
     category: ErrorCategory = "PERMANENT_INPUT_ERROR",
     retryable: bool = False,
     retry_after_seconds: int | None = None,
+    usage_status: UsageStatus = "UNAVAILABLE",
+    usage: Usage | None = None,
 ) -> ProviderFailure:
     trace: dict[str, UUID] = {}
     for key in ("correlation_id", "provider_call_id"):
@@ -35,8 +54,8 @@ def failure_payload(
         error_code=code,
         retryable=retryable,
         retry_after_seconds=retry_after_seconds,
-        usage_status="UNAVAILABLE",
-        usage=unavailable_usage(),
+        usage_status=usage_status,
+        usage=usage or _unavailable_usage(),
     )
 
 
@@ -50,6 +69,9 @@ def failure_response(
     category: ErrorCategory = "PERMANENT_INPUT_ERROR",
     retryable: bool = False,
     retry_after_seconds: int | None = None,
+    usage_status: UsageStatus = "UNAVAILABLE",
+    usage: Usage | None = None,
+    provider_mode: str | None = None,
 ) -> JSONResponse:
     failure = failure_payload(
         code,
@@ -59,11 +81,13 @@ def failure_response(
         category=category,
         retryable=retryable,
         retry_after_seconds=retry_after_seconds,
+        usage_status=usage_status,
+        usage=usage,
     )
     return JSONResponse(
         status_code=status,
         content=InternalError(error=failure).model_dump(mode="json"),
-        headers={"X-Provider-Mode": "MOCK"},
+        headers={"X-Provider-Mode": provider_mode or _provider_mode_header()},
     )
 
 

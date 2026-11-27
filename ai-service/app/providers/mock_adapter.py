@@ -10,11 +10,11 @@ from pydantic import BaseModel, SecretStr
 
 from app.prompt_builder import BuiltPrompt, build_prompt, get_current_built_prompt
 from app.providers.base import AdapterStatus
+from app.providers.error_mapper import ProviderExecutionError
 from app.schemas.contracts import (
     AssistantDelta,
     EmbeddingInput,
     EmbeddingResult,
-    ErrorCategory,
     GenerateInput,
     GenerateResult,
     PromptEnvelope,
@@ -91,26 +91,8 @@ def reset_mock_request_context(token: Token[MockRequestContext | None]) -> None:
     _MOCK_REQUEST_CONTEXT.reset(token)
 
 
-class MockScenarioFailure(Exception):
+class MockScenarioFailure(ProviderExecutionError):
     """Normalized adapter failure raised by synchronous mock error triggers."""
-
-    def __init__(
-        self,
-        *,
-        error_code: str,
-        error_category: ErrorCategory,
-        dispatched: bool,
-        occurred_at: datetime | None,
-        retryable: bool,
-        retry_after_seconds: int | None = None,
-    ) -> None:
-        super().__init__(error_code)
-        self.error_code = error_code
-        self.error_category = error_category
-        self.dispatched = dispatched
-        self.occurred_at = occurred_at
-        self.retryable = retryable
-        self.retry_after_seconds = retry_after_seconds
 
 
 def unavailable_usage() -> Usage:
