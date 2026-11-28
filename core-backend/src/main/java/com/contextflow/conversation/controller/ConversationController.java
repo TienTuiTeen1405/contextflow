@@ -1,16 +1,20 @@
 package com.contextflow.conversation.controller;
 
 import com.contextflow.conversation.dto.ConversationCreateRequest;
+import com.contextflow.conversation.dto.ConversationOutlineResponse;
 import com.contextflow.conversation.dto.ConversationPatchRequest;
 import com.contextflow.conversation.dto.ConversationResponse;
 import com.contextflow.conversation.dto.ConversationStatusFilter;
 import com.contextflow.conversation.dto.ConversationsPageResponse;
+import com.contextflow.conversation.dto.TurnsPageResponse;
 import com.contextflow.conversation.service.ConversationService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.PositiveOrZero;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -27,7 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/projects/{projectId}")
 @RequiredArgsConstructor
-@Tag(name = "Conversations", description = "Conversation CRUD")
+@Tag(name = "Conversations", description = "Conversation CRUD, Main Stage turns and outline")
 public class ConversationController {
     private final ConversationService conversationService;
 
@@ -56,5 +60,30 @@ public class ConversationController {
             @PathVariable UUID conversationId,
             @Valid @RequestBody ConversationPatchRequest request) {
         return conversationService.updateConversation(projectId, conversationId, request);
+    }
+
+    @GetMapping("/conversations/{conversationId}/outline")
+    @Operation(summary = "Outline of a conversation: Main Stages by stage order")
+    public ConversationOutlineResponse getConversationOutline(
+            @PathVariable UUID projectId, @PathVariable UUID conversationId) {
+        return conversationService.getConversationOutline(projectId, conversationId);
+    }
+
+    @GetMapping("/stages/{stageId}/turns")
+    @Operation(summary = "Committed Main-route turns of a Main Stage, ordered by sequence")
+    public TurnsPageResponse listStageTurns(
+            @PathVariable UUID projectId,
+            @PathVariable UUID stageId,
+            @Parameter(description = "Return turns with sequenceNo greater than this value")
+                    @RequestParam(required = false)
+                    @PositiveOrZero
+                    Long afterSequence,
+            @Parameter(description = "Return turns with sequenceNo lower than this value")
+                    @RequestParam(required = false)
+                    @PositiveOrZero
+                    Long beforeSequence,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int limit) {
+        return conversationService.listMainStageTurns(
+                projectId, stageId, afterSequence, beforeSequence, limit);
     }
 }

@@ -17,6 +17,8 @@ public interface ConversationRepository extends JpaRepository<Conversation, UUID
     Page<Conversation> findByProjectIdAndStatusIn(
             UUID projectId, Collection<ConversationStatus> statuses, Pageable pageable);
 
+    Optional<Conversation> findByIdAndProjectId(UUID id, UUID projectId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT c FROM Conversation c WHERE c.id = :id AND c.projectId = :projectId")
     Optional<Conversation> findByIdAndProjectIdForUpdate(

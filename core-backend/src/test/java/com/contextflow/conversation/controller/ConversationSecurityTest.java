@@ -41,6 +41,7 @@ class ConversationSecurityTest {
     void conversationRoutesRequireAuthenticationInDefaultProfile() throws Exception {
         UUID projectId = UUID.randomUUID();
         UUID conversationId = UUID.randomUUID();
+        UUID stageId = UUID.randomUUID();
 
         expectUnauthorized(get("/api/v1/projects/{projectId}/conversations", projectId));
         expectUnauthorized(
@@ -54,6 +55,13 @@ class ConversationSecurityTest {
                                 conversationId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"title\":\"Tên mới\"}"));
+        expectUnauthorized(
+                get(
+                        "/api/v1/projects/{projectId}/conversations/{conversationId}/outline",
+                        projectId,
+                        conversationId));
+        expectUnauthorized(
+                get("/api/v1/projects/{projectId}/stages/{stageId}/turns", projectId, stageId));
         verifyNoInteractions(conversationService);
     }
 

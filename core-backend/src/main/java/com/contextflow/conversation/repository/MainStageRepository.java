@@ -10,6 +10,11 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface MainStageRepository extends JpaRepository<MainStage, UUID> {
+    Optional<MainStage> findByIdAndProjectId(UUID id, UUID projectId);
+
+    List<MainStage> findByProjectIdAndConversationIdOrderByStageOrderAsc(
+            UUID projectId, UUID conversationId);
+
     Optional<MainStage> findFirstByProjectIdAndConversationIdOrderByStageOrderDesc(
             UUID projectId, UUID conversationId);
 
